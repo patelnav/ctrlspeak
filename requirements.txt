@@ -4,8 +4,6 @@ torchaudio
 numpy<2.0.0
 
 # Speech recognition models
-transformers>=4.43.0  # For Whisper model (default)
-accelerate>=0.30.0    # For accelerating Whisper model
 nemo_toolkit[asr]>=1.23.0  # For Parakeet and Canary models
 
 # Audio processing

@@ -3,7 +3,7 @@
 
 ## 🚀 Overview
 
-**ctrlSPEAK** is your *set-it-and-forget-it* speech-to-text companion. Triple-tap `Ctrl`, speak your mind, and watch your words appear wherever your cursor blinks — effortlessly copied and pasted. Built for macOS, it’s lightweight, low-overhead, and stays out of your way until you call it.
+**ctrlSPEAK** is your *set-it-and-forget-it* speech-to-text companion. Triple-tap `Ctrl`, speak your mind, and watch your words appear wherever your cursor blinks — effortlessly copied and pasted. Built for macOS, it's lightweight, low-overhead, and stays out of your way until you call it.
 
 ## ✨ Features
 
@@ -11,7 +11,7 @@
 - ⚡ **Triple-Tap Magic**: Start/stop recording with a quick `Ctrl` triple-tap  
 - 📋 **Auto-Paste**: Text lands right where you need it, no extra clicks  
 - 🔊 **Audio Cues**: Hear when recording begins and ends  
-- 🍎 **Mac Optimized**: Harnesses Apple Silicon’s MPS for blazing performance  
+- 🍎 **Mac Optimized**: Harnesses Apple Silicon's MPS for blazing performance  
 - 🌟 **Top-Tier Models**: Powered by NVIDIA NeMo and OpenAI Whisper  
 
 ## 🛠️ Get Started
@@ -21,7 +21,7 @@
 - **Permissions**:  
   - 🎤 Microphone (for recording)  
   - ⌨️ Accessibility (for shortcuts)  
-*Grant these on first launch and you’re good to go!*
+*Grant these on first launch and you're good to go!*
 
 ## 🧰 Entry Points
 
@@ -42,9 +42,10 @@
 
 ctrlSPEAK uses open-source speech recognition models:
 
-- **Whisper** (default): OpenAI's fast and accurate general-purpose speech recognition model
-- **Parakeet**: NVIDIA NeMo's English-only model with high accuracy
+- **Parakeet** (default): NVIDIA NeMo's English-only model with high accuracy
 - **Canary**: NVIDIA NeMo's multilingual model supporting English, German, French, and Spanish
+- **Whisper** (optional): OpenAI's fast and accurate general-purpose speech recognition model
+  - To use Whisper, install additional dependencies: `pip install -r requirements-whisper.txt`
 
 The models are automatically downloaded from HuggingFace the first time you use them.
 

@@ -1,0 +1,5 @@
+# Additional dependencies for Whisper model support
+# Install these after installing requirements.txt
+
+transformers>=4.43.0  # For Whisper model
+accelerate>=0.30.0    # For accelerating Whisper model 
