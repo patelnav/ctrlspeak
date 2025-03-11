@@ -1,4 +1,9 @@
 # 🎙️ ctrlSPEAK  
+
+[![Homebrew](https://img.shields.io/badge/Homebrew-Install-orange)](https://github.com/patelnav/homebrew-ctrlspeak)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Turn your voice into text with a triple-tap — minimal, fast, and macOS-native.**
 
 ## 🚀 Overview
@@ -23,6 +28,60 @@
   - ⌨️ Accessibility (for shortcuts)  
 *Grant these on first launch and you're good to go!*
 
+### 📦 Installation
+
+#### Using Homebrew (Recommended)
+
+```bash
+# Install ctrlSPEAK using Homebrew
+brew tap patelnav/ctrlspeak
+brew install ctrlspeak
+```
+
+For faster package installation:
+```bash
+# Install with UV support for faster package installation
+brew install ctrlspeak --with-uv
+```
+
+#### Manual Installation
+
+Clone the repository:
+```bash
+git clone https://github.com/patelnav/ctrlspeak.git
+cd ctrlspeak
+```
+
+Create and activate a virtual environment:
+```bash
+# Create a virtual environment
+python -m venv .venv
+
+# Activate it on macOS/Linux
+source .venv/bin/activate
+```
+
+Install dependencies (recommended with UV for faster installation):
+```bash
+# Install UV first if you don't have it
+pip install uv
+
+# Then install dependencies with UV
+uv pip install -r requirements.txt
+
+# Or use traditional pip (slower)
+pip install -r requirements.txt
+```
+
+For Whisper model support (optional):
+```bash
+# With UV (recommended)
+uv pip install -r requirements-whisper.txt
+
+# Or with traditional pip
+pip install -r requirements-whisper.txt
+```
+
 ## 🧰 Entry Points
 
 - `ctrlspeak.py`: The full-featured star of the show  
@@ -32,7 +91,14 @@
 
 ### Workflow
 
-1. Run ctrlSPEAK in a terminal window
+1. Run ctrlSPEAK in a terminal window:
+   ```bash
+   # If installed with Homebrew
+   ctrlspeak
+   
+   # If installed manually (from the project directory with activated venv)
+   python ctrlspeak.py
+   ```
 2. Triple-tap Ctrl to start recording
 3. Speak clearly into your microphone
 4. Triple-tap Ctrl again to stop recording
@@ -45,9 +111,30 @@ ctrlSPEAK uses open-source speech recognition models:
 - **Parakeet** (default): NVIDIA NeMo's English-only model with high accuracy
 - **Canary**: NVIDIA NeMo's multilingual model supporting English, German, French, and Spanish
 - **Whisper** (optional): OpenAI's fast and accurate general-purpose speech recognition model
-  - To use Whisper, install additional dependencies: `pip install -r requirements-whisper.txt`
+  - To use Whisper, install additional dependencies: `uv pip install -r requirements-whisper.txt` or `pip install -r requirements-whisper.txt`
 
 The models are automatically downloaded from HuggingFace the first time you use them.
+
+### Model Selection
+
+You can specify which model to use with the `--model` flag:
+
+```bash
+# Using Homebrew installation
+ctrlspeak --model parakeet  # Default
+ctrlspeak --model canary    # Multilingual with punctuation
+ctrlspeak --model whisper   # OpenAI's model
+
+# Using manual installation
+python ctrlspeak.py --model parakeet
+python ctrlspeak.py --model canary
+python ctrlspeak.py --model whisper
+```
+
+For debugging, you can use the `--debug` flag:
+```bash
+ctrlspeak --debug
+```
 
 ## Models Tested
 
