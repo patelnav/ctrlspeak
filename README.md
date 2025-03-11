@@ -76,6 +76,12 @@ You'll be prompted to grant these permissions on first run.
 - **Keyboard shortcuts not working**: Grant accessibility permissions in System Settings
 - **Transcription errors**: Try speaking more clearly or using the other model
 
+## Credits
+
+### Sound Effects
+- Start sound: ["Notification Pluck On"](https://pixabay.com/sound-effects/notification-pluck-on-269288/) from Pixabay
+- Stop sound: ["Notification Pluck Off"](https://pixabay.com/sound-effects/notification-pluck-off-269290/) from Pixabay
+
 ## License
 
 [MIT License](LICENSE)
