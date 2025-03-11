@@ -3,17 +3,32 @@
 ctrlSPEAK - A speech-to-text utility that runs in the background.
 Triple-tap Ctrl to start/stop recording.
 """
-import torch
-import numpy as np
 import time
-import threading
+startup_time = time.time()
+
+# Import our config module first
+print(f"Starting imports... {time.time() - startup_time:.2f}s")
+from utils.config import is_first_run, mark_first_run_complete, get_preferred_model, set_preferred_model
+
+# Show first run message if needed
+if is_first_run():
+    print("\n╭─────────────────────── First Run ───────────────────────╮")
+    print("│ First time running ctrlSPEAK - optimizing libraries...  │")
+    print("│ This may take a minute, but future starts will be faster │")
+    print("╰────────────────────────────────────────────────────────╯\n")
+
+# Import standard libraries
 import os
 import sys
+import threading
 import argparse
 import logging
 import warnings
 import io
 from contextlib import redirect_stdout, redirect_stderr, nullcontext
+print(f"Basic imports done... {time.time() - startup_time:.2f}s")
+
+# Import UI and system libraries
 from AppKit import NSWorkspace
 import subprocess
 from rich.console import Console
@@ -24,6 +39,23 @@ from rich import print as rprint
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.logging import RichHandler
 from rich.text import Text
+print(f"UI imports done... {time.time() - startup_time:.2f}s")
+
+# Import ML libraries
+print(f"Starting torch import... {time.time() - startup_time:.2f}s")
+import torch
+import numpy as np
+print(f"Torch imported... {time.time() - startup_time:.2f}s")
+
+# Import our modules
+print(f"Starting app imports... {time.time() - startup_time:.2f}s")
+from models.factory import ModelFactory
+from utils.keyboard_shortcuts import KeyboardShortcutManager
+from utils.clipboard import copy_to_clipboard, paste_from_clipboard
+from utils.player import play_start_beep, play_stop_beep
+from utils.audio import AudioManager, check_microphone_permissions, SAMPLE_RATE, CHANNELS
+from utils import permission_manager
+print(f"All imports done... {time.time() - startup_time:.2f}s")
 
 # Debug flag - will be set from command line
 DEBUG_MODE = False
@@ -327,7 +359,8 @@ def exit_app():
 def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
-    parser.add_argument("--model", type=str, choices=["parakeet", "canary", "whisper"], default="parakeet",
+    parser.add_argument("--model", type=str, choices=["parakeet", "canary", "whisper"], 
+                        default=get_preferred_model(),
                         help="Speech recognition model to use")
     parser.add_argument("--debug", action="store_true", 
                         help="Enable debug mode with verbose logging")
@@ -340,24 +373,28 @@ def main():
     try:
         # Parse command-line arguments
         args = parse_arguments()
+        DEBUG_MODE = args.debug
         model_type = args.model
         
-        # Set up debug mode if requested
-        if args.debug:
-            DEBUG_MODE = True
-            setup_logging_for_mode(True)
-            logger.debug("Debug mode enabled")
-        else:
-            setup_logging_for_mode(False)
+        # Setup logging
+        setup_logging_for_mode(DEBUG_MODE)
+        
+        # Check permissions first
+        if not check_permissions():
+            return 1
+        
+        # Update configuration after first run
+        if is_first_run():
+            mark_first_run_complete()
+        
+        # Save the selected model as preferred
+        set_preferred_model(model_type)
         
         # Initialize audio manager with debug mode
         audio_manager = AudioManager(debug_mode=DEBUG_MODE)
         
         # Print startup info based on debug mode
         print_startup_info()
-        
-        # Check permissions first
-        check_permissions()
         
         # Create a welcome banner
         console.print(Panel.fit(
