@@ -8,3 +8,6 @@ temp_recording.wav
 
 # macOS
 .DS_Store
+
+# Distribution files
+*.tar.gz
