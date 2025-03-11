@@ -9,7 +9,7 @@ nemo_toolkit[asr]>=1.23.0  # For Parakeet and Canary models
 # Audio processing
 sounddevice
 soundfile
-audioop-lts  # For Python 3.13+ compatibility
+# audioop-lts  # For Python 3.13+ compatibility - commented out for now
 
 # UI and system integration
 pynput     # For keyboard shortcuts
