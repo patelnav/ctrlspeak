@@ -1,0 +1,20 @@
+# Core dependencies
+torch>=2.0.0
+torchaudio
+numpy<2.0.0
+
+# Speech recognition models
+transformers>=4.43.0  # For Whisper model (default)
+accelerate>=0.30.0    # For accelerating Whisper model
+nemo_toolkit[asr]>=1.23.0  # For Parakeet and Canary models
+
+# Audio processing
+sounddevice
+soundfile
+pydub
+audioop-lts  # For Python 3.13+ compatibility
+
+# UI and system integration
+pynput     # For keyboard shortcuts
+pyperclip  # For clipboard operations
+rich>=13.6.0  # For terminal UI 

@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Audio recording
+temp_recording.wav
+
+# macOS
+.DS_Store
