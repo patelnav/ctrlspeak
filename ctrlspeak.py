@@ -127,6 +127,22 @@ for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger',
     # Also apply our filter to each logger
     logging.getLogger(lib).addFilter(FilterNemoWarnings())
 
+def save_environment_variables():
+    """Save current environment variables for later restoration"""
+    return {
+        "NEMO_LOGGING_LEVEL": os.environ.get("NEMO_LOGGING_LEVEL", ""),
+        "TF_CPP_MIN_LOG_LEVEL": os.environ.get("TF_CPP_MIN_LOG_LEVEL", ""),
+        "PYTORCH_ENABLE_MPS_FALLBACK": os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK", "")
+    }
+
+def restore_environment_variables(saved_vars):
+    """Restore environment variables from saved state"""
+    for key, value in saved_vars.items():
+        if value:
+            os.environ[key] = value
+        elif key in os.environ:
+            del os.environ[key]
+
 def setup_logging_for_mode(debug_mode):
     """Configure logging based on debug mode"""
     if debug_mode:
@@ -251,40 +267,47 @@ def get_model():
     console.print("\n[bold yellow]Loading model... please wait[/bold yellow]")
     start_time = time.time()
     
-    # Temporarily enable all logging for model loading regardless of debug mode
-    old_levels = {}
-    old_nemo_level = os.environ.get("NEMO_LOGGING_LEVEL", "ERROR")
-    
-    # Configure logging to show all model-related logs
-    for name, logger in logging.root.manager.loggerDict.items():
-        if isinstance(logger, logging.Logger):
-            old_levels[name] = logger.level
-            # Allow model-related loggers to show INFO level messages
-            if any(x in name.lower() for x in ['model', 'huggingface', 'transformers', 'nemo', 'download', 'tqdm', 'urllib', 'requests']):
-                logger.setLevel(logging.INFO)
-    
-    # Set NeMo logging to INFO to see download progress
-    os.environ["NEMO_LOGGING_LEVEL"] = "INFO"
-    
+    # DIAGNOSTIC STEP 1: Simplified model loading approach from test_transcription.py
+    # DIAGNOSTIC STEP 2: Enhanced exception handling with detailed logging
     try:
-        # Load the model with verbose=True to see all logs
-        stt_model = ModelFactory.get_model(model_type=model_type, device=device, verbose=True)
+        # Step 1: Create model instance
+        logger.info(f"Step 1: Creating {model_type} model instance...")
+        try:
+            stt_model = ModelFactory.get_model(model_type=model_type, device=device, verbose=DEBUG_MODE)
+            logger.info("Model instance created successfully")
+        except Exception as e:
+            logger.error(f"Error creating model instance: {str(e)}")
+            console.print(f"[bold red]Error creating model instance: {str(e)}[/bold red]")
+            if DEBUG_MODE:
+                import traceback
+                traceback.print_exc()
+            return None
         
-        # Initialize the model
-        stt_model.load_model()
-    finally:
-        # Restore logging levels
-        for name, level in old_levels.items():
-            logging.getLogger(name).setLevel(level)
+        # Step 2: Load model weights
+        logger.info("Step 2: Loading model weights...")
+        try:
+            stt_model.load_model()
+            logger.info("Model weights loaded successfully")
+        except Exception as e:
+            logger.error(f"Error loading model weights: {str(e)}")
+            console.print(f"[bold red]Error loading model weights: {str(e)}[/bold red]")
+            if DEBUG_MODE:
+                import traceback
+                traceback.print_exc()
+            return None
         
-        # Restore environment variables
-        os.environ["NEMO_LOGGING_LEVEL"] = old_nemo_level
-    
-    end_time = time.time()
-    model_loaded = True
-    console.print(f"[bold green]Model loaded in {end_time - start_time:.2f} seconds. Ready to record![/bold green]")
-    
-    return stt_model
+        end_time = time.time()
+        model_loaded = True
+        console.print(f"[bold green]Model loaded in {end_time - start_time:.2f} seconds. Ready to record![/bold green]")
+        
+        return stt_model
+    except Exception as e:
+        logger.error(f"Unexpected error in get_model: {str(e)}")
+        console.print(f"[bold red]Unexpected error in get_model: {str(e)}[/bold red]")
+        if DEBUG_MODE:
+            import traceback
+            traceback.print_exc()
+        return None
 
 def process_audio_thread():
     """Thread function to process audio"""
@@ -382,6 +405,9 @@ def main():
     """Main application entry point"""
     global model_type, DEBUG_MODE, audio_manager
     
+    # DIAGNOSTIC STEP 3: Save environment variables at the start
+    saved_env_vars = save_environment_variables()
+    
     try:
         # Parse command-line arguments
         args = parse_arguments()
@@ -416,6 +442,9 @@ def main():
             border_style="blue"
         ))
         
+        # DIAGNOSTIC STEP 3: Restore environment variables before loading model
+        restore_environment_variables(saved_env_vars)
+        
         # Load model immediately on startup
         get_model()
         
@@ -447,6 +476,9 @@ def main():
     except KeyboardInterrupt:
         console.print("\n[bold yellow]Stopping recording...[/bold yellow]")
     finally:
+        # DIAGNOSTIC STEP 3: Restore environment variables at the end
+        restore_environment_variables(saved_env_vars)
+        
         if audio_manager:
             audio_manager.set_is_running(False)
         if 'process_thread' in locals() and process_thread.is_alive():
