@@ -10,12 +10,8 @@ startup_time = time.time()
 print(f"Starting imports... {time.time() - startup_time:.2f}s")
 from utils.config import is_first_run, mark_first_run_complete, get_preferred_model, set_preferred_model
 
-# Show first run message if needed
-if is_first_run():
-    print("\n╭─────────────────────── First Run ───────────────────────╮")
-    print("│ First time running ctrlSPEAK - optimizing libraries...  │")
-    print("│ This may take a minute, but future starts will be faster │")
-    print("╰────────────────────────────────────────────────────────╯\n")
+# Store first run flag
+show_first_run_message = is_first_run()
 
 # Import standard libraries
 import os
@@ -25,17 +21,28 @@ import argparse
 import logging
 import warnings
 import io
-from contextlib import redirect_stdout, redirect_stderr, nullcontext
 print(f"Basic imports done... {time.time() - startup_time:.2f}s")
+
+# Early import of Rich console for first run message
+from rich.console import Console
+from rich.panel import Panel
+# Initialize Rich console early
+console = Console()
+print = console.print  # Override print with Rich console.print
+
+# Show first run message as early as possible
+if show_first_run_message:
+    console.print(Panel.fit(
+        "[bold yellow]First time running ctrlSPEAK - optimizing libraries...[/bold yellow]\n"
+        "This may take a minute, but future starts will be faster",
+        title="First Run",
+        border_style="blue"
+    ))
 
 # Import UI and system libraries
 from AppKit import NSWorkspace
 import subprocess
-from rich.console import Console
-from rich.panel import Panel
-from rich.markdown import Markdown
 from rich.table import Table
-from rich import print as rprint
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.logging import RichHandler
 from rich.text import Text
@@ -103,11 +110,6 @@ for logger_name in ['nemo', 'nemo_logger', 'nemo.collections']:
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.CRITICAL)
     logger.addFilter(FilterNemoWarnings())
-
-# Initialize Rich console
-console = Console()
-
-print = console.print  # Override print with Rich console.print
 
 # Set up logging - need to do this early
 logging.basicConfig(
@@ -249,21 +251,34 @@ def get_model():
     console.print("\n[bold yellow]Loading model... please wait[/bold yellow]")
     start_time = time.time()
     
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[bold yellow]Loading {task.description}[/bold yellow]"),
-    ) as progress:
-        # Create model using factory - wrap with progress indicator
-        task = progress.add_task(f"[bold]{model_type}[/bold] model")
-        
-        # Load the model
-        stt_model = quiet_function(ModelFactory.get_model, model_type=model_type, device=device)
+    # Temporarily enable all logging for model loading regardless of debug mode
+    old_levels = {}
+    old_nemo_level = os.environ.get("NEMO_LOGGING_LEVEL", "ERROR")
+    
+    # Configure logging to show all model-related logs
+    for name, logger in logging.root.manager.loggerDict.items():
+        if isinstance(logger, logging.Logger):
+            old_levels[name] = logger.level
+            # Allow model-related loggers to show INFO level messages
+            if any(x in name.lower() for x in ['model', 'huggingface', 'transformers', 'nemo', 'download', 'tqdm', 'urllib', 'requests']):
+                logger.setLevel(logging.INFO)
+    
+    # Set NeMo logging to INFO to see download progress
+    os.environ["NEMO_LOGGING_LEVEL"] = "INFO"
+    
+    try:
+        # Load the model with verbose=True to see all logs
+        stt_model = ModelFactory.get_model(model_type=model_type, device=device, verbose=True)
         
         # Initialize the model
-        quiet_function(stt_model.load_model)
+        stt_model.load_model()
+    finally:
+        # Restore logging levels
+        for name, level in old_levels.items():
+            logging.getLogger(name).setLevel(level)
         
-        # Stop the progress display
-        progress.stop()
+        # Restore environment variables
+        os.environ["NEMO_LOGGING_LEVEL"] = old_nemo_level
     
     end_time = time.time()
     model_loaded = True
@@ -325,12 +340,9 @@ def on_activate():
                     copy_to_clipboard(text)
                     paste_from_clipboard()
                     
-                    # Create a clean panel for the transcription
-                    console.print(Panel(
-                        Text(text),
-                        title="Transcription",
-                        border_style="cyan"
-                    ))
+                    # Display transcription without a panel for easy copy-paste
+                    console.print("\n[bold cyan]Transcription:[/bold cyan]")
+                    console.print(text)
                     
                     console.print(f"[dim]Completed in [bold]{end_time - start_time:.2f}[/bold] seconds[/dim]")
             except Exception as e:
