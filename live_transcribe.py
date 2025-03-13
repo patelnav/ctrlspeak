@@ -78,10 +78,24 @@ def process_audio():
                 # Transcribe
                 try:
                     start_time = time.time()
-                    transcription = model.transcribe([temp_file])[0]
+                    
+                    # Use direct transcription since we're working with raw NeMo model
+                    # This doesn't have our BaseSTTModel interface
+                    result = model.transcribe([temp_file])
                     end_time = time.time()
-                    if transcription and transcription[0]:  # Only print non-empty transcriptions
-                        print(f"\nTranscription ({end_time - start_time:.2f}s): {transcription[0]}")
+                    
+                    # Clean up the result
+                    if isinstance(result, list) and result:
+                        text = result[0]
+                    else:
+                        text = str(result) if result else ""
+                    
+                    # Remove any remaining list brackets from display
+                    text = text.strip()
+                    
+                    # Only print non-empty transcriptions
+                    if text:
+                        print(f"\nTranscription ({end_time - start_time:.2f}s): {text}")
                 except Exception as e:
                     print(f"Error during transcription: {e}")
                 

@@ -7,6 +7,7 @@ from models.base_model import BaseSTTModel
 import torch
 import logging
 import os
+from typing import List
 
 # Configure logging
 logger = logging.getLogger("canary_model")
@@ -101,17 +102,20 @@ class CanaryModel(BaseSTTModel):
             logger.error(f"Error loading model: {str(e)}")
             raise
     
-    def transcribe(self, audio_paths):
-        """Transcribe audio files.
+    def transcribe_batch(self, audio_paths: List[str]) -> List[str]:
+        """Transcribe multiple audio files in batch.
         
         Args:
             audio_paths: List of paths to audio files.
             
         Returns:
-            List of transcriptions.
+            List of clean string transcriptions.
         """
         if self.model is None:
             self.load_model()
+            
+        if not audio_paths:
+            return []
         
         try:
             start_time = time.time()
@@ -130,15 +134,13 @@ class CanaryModel(BaseSTTModel):
             
             with torch.amp.autocast(self.device.type, dtype=self.amp_dtype, enabled=self.use_amp):
                 with torch.no_grad():
-                    result = self.model.transcribe(audio_paths)
+                    raw_result = self.model.transcribe(audio_paths)
             
             transcribe_time = time.time() - transcribe_start
             logger.debug(f"Transcription completed in {transcribe_time:.2f} seconds")
             
-            # Process the result
-            transcriptions = []
-            if isinstance(result, list):
-                transcriptions = result
+            # Clean up each result
+            transcriptions = [self._clean_text(text) for text in raw_result]
             
             end_time = time.time()
             logger.info(f"Transcription completed in {end_time - start_time:.2f} seconds")

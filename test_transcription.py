@@ -47,7 +47,7 @@ def transcribe_audio(audio_file, model_type, verbose=False):
     # Load model
     logger.info(f"Loading {model_type} model...")
     start_time = time.time()
-    model = ModelFactory.get_model(model_type=model_type, device=device)
+    model = ModelFactory.get_model(model_type=model_type, device=device, verbose=verbose)
     model.load_model()
     load_time = time.time() - start_time
     logger.info(f"Model loaded in {load_time:.2f} seconds")
@@ -56,17 +56,18 @@ def transcribe_audio(audio_file, model_type, verbose=False):
     logger.info(f"Transcribing {audio_file}...")
     start_time = time.time()
     
-    # Transcribe using our interface
-    result = model.transcribe([audio_file])
+    # Transcribe using our simplified API
+    result = model.transcribe(audio_file)
     
     end_time = time.time()
     transcribe_time = end_time - start_time
     
     # Print results
     logger.info(f"Transcription completed in {transcribe_time:.2f} seconds")
-    if result and result[0]:
+    
+    if result:
         logger.info("-" * 50)
-        logger.info(f"Transcription: {result[0]}")
+        logger.info(f"Transcription: {result}")
         logger.info("-" * 50)
     else:
         logger.warning("No transcription result")

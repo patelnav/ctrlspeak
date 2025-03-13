@@ -347,8 +347,12 @@ def on_activate():
                     logging.getLogger().setLevel(logging.CRITICAL)
                     os.environ["NEMO_LOGGING_LEVEL"] = "CRITICAL"
                     
-                    # Transcribe without output
-                    transcription = quiet_function(stt_model.transcribe, [audio_file])
+                    # Use the clean single-file API directly
+                    text = quiet_function(stt_model.transcribe, audio_file)
+                    
+                    # Debug logging
+                    if DEBUG_MODE:
+                        logger.debug(f"Transcription result: {text}")
                     
                     # Restore logging if in debug mode
                     if DEBUG_MODE:
@@ -357,17 +361,19 @@ def on_activate():
                     end_time = time.time()
                     progress.stop()
                 
-                # Copy to clipboard and simulate paste
-                if transcription and transcription[0]:
-                    text = transcription[0]
+                # Copy to clipboard and simulate paste if we got a result
+                if text:
                     copy_to_clipboard(text)
                     paste_from_clipboard()
                     
                     # Display transcription without a panel for easy copy-paste
                     console.print("\n[bold cyan]Transcription:[/bold cyan]")
+                    # Display text as-is, no need for extra formatting
                     console.print(text)
                     
                     console.print(f"[dim]Completed in [bold]{end_time - start_time:.2f}[/bold] seconds[/dim]")
+                else:
+                    console.print("[yellow]No transcription result[/yellow]")
             except Exception as e:
                 console.print(f"[bold red]Error during transcription: {e}[/bold red]")
                 # If error occurs, at least show what's in clipboard

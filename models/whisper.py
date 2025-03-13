@@ -7,6 +7,7 @@ import torch
 import logging
 from models.base_model import BaseSTTModel
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from typing import List
 
 # Configure logging
 logger = logging.getLogger("whisper_model")
@@ -96,17 +97,20 @@ class WhisperModel(BaseSTTModel):
             logger.error(f"Error loading model: {str(e)}")
             raise
     
-    def transcribe(self, audio_paths):
-        """Transcribe audio files.
+    def transcribe_batch(self, audio_paths: List[str]) -> List[str]:
+        """Transcribe multiple audio files in batch.
         
         Args:
             audio_paths: List of paths to audio files.
             
         Returns:
-            List of transcriptions.
+            List of clean string transcriptions.
         """
         if self.model is None:
             self.load_model()
+            
+        if not audio_paths:
+            return []
         
         try:
             start_time = time.time()
@@ -129,9 +133,8 @@ class WhisperModel(BaseSTTModel):
                     with torch.no_grad():
                         # Process the audio with simpler parameters
                         result = self.pipe(audio_path)
-                        
-                        # Get the text
-                        transcriptions.append(result["text"])
+                        # Clean up the result
+                        transcriptions.append(self._clean_text(result["text"]))
             
             transcribe_time = time.time() - transcribe_start
             logger.debug(f"Transcription completed in {transcribe_time:.2f} seconds")
