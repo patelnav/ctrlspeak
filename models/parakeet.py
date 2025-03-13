@@ -87,8 +87,22 @@ class ParakeetModel(BaseSTTModel):
             # Let NeMo handle the transcription
             raw_transcriptions = self.model.transcribe(audio_paths)
             
-            # Clean up each result
-            transcriptions = [self._clean_text(text) for text in raw_transcriptions]
+            # NeMo 2.2.0+ returns Hypothesis objects, so we need special handling
+            # Check if we're dealing with Hypothesis objects
+            is_hypothesis = False
+            if raw_transcriptions and isinstance(raw_transcriptions, list):
+                if len(raw_transcriptions) > 0 and hasattr(raw_transcriptions[0], 'text'):
+                    is_hypothesis = True
+                    
+            # Handle the Hypothesis objects if needed
+            if is_hypothesis:
+                logger.debug("Handling Hypothesis objects from NeMo 2.2.0+")
+                # Extract just the text from each Hypothesis object
+                text_only = [hyp.text for hyp in raw_transcriptions if hasattr(hyp, 'text')]
+                transcriptions = text_only
+            else:
+                # Clean up each result using the standard method
+                transcriptions = [self._clean_text(text) for text in raw_transcriptions]
             
             # Log results if in debug mode
             if self.verbose:

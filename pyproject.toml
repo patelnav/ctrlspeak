@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ctrlspeak"
+version = "1.0.2"
+description = "Minimal speech-to-text utility for macOS"
+readme = "README.md"
+authors = [
+    {name = "Nav Patel", email = "nav@abhi.in"},
+]
+license = {text = "MIT"}
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Text Processing",
+]
+keywords = ["speech-to-text", "voice-recognition", "macos", "accessibility"]
+
+dependencies = [
+    "torch>=2.0.0",
+    "torchaudio",
+    "numpy<2.0.0",
+    "nemo_toolkit[asr]>=1.23.0",
+    "sounddevice",
+    "soundfile",
+    "pynput",
+    "pyperclip",
+    "rich>=13.6.0",
+]
+
+[project.optional-dependencies]
+whisper = [
+    "transformers>=4.43.0",
+    "accelerate>=0.30.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/patelnav/ctrlspeak"
+Repository = "https://github.com/patelnav/ctrlspeak.git"
+"Bug Tracker" = "https://github.com/patelnav/ctrlspeak/issues"
+
+[project.scripts]
+ctrlspeak = "ctrlspeak:main"
+
+[tool.setuptools]
+packages = ["models", "utils"]
+
+[tool.setuptools.package-data]
+"" = ["on.wav", "off.wav"] 
