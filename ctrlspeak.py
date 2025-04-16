@@ -554,6 +554,7 @@ def on_activate():
     else:
         # --- Stop Recording --- 
         logger.info("Stop activated. Stopping audio recording...")
+        play_stop_beep() # Play beep immediately on stop trigger
         audio_manager.stop_recording() # Queues audio data
         
         # Phase 5: Remove active_event clearing, keep queue.join()
@@ -564,7 +565,7 @@ def on_activate():
         
         # ... (Concatenate results, play beep, paste)
         final_text = " ".join(transcribed_chunks).strip()
-        play_stop_beep()
+        # play_stop_beep() # Moved earlier
         if final_text:
             logger.info(f"Final text (len {len(final_text)} chars): {final_text[:100]}...")
             copy_to_clipboard(final_text)
