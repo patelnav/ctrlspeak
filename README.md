@@ -175,3 +175,59 @@ You'll be prompted to grant these permissions on first run.
 ## License
 
 [MIT License](LICENSE)
+
+## Release Process
+
+This outlines the steps to create a new release and update the associated Homebrew tap.
+
+**1. Prepare the Release:**
+
+*   Ensure the code is stable and tests pass.
+*   Update the version number in the following files:
+    *   `VERSION` (e.g., `1.2.0`)
+    *   `__init__.py` (`__version__ = "1.2.0"`)
+    *   `pyproject.toml` (`version = "1.2.0"`)
+*   Commit these version changes:
+    ```bash
+    git add VERSION __init__.py pyproject.toml
+    git commit -m "Bump version to X.Y.Z"
+    ```
+
+**2. Tag and Push:**
+
+*   Create a git tag matching the version:
+    ```bash
+    git tag vX.Y.Z
+    ```
+*   Push the commits and the tag to the remote repository:
+    ```bash
+    git push && git push origin vX.Y.Z
+    ```
+
+**3. Update Homebrew Tap:**
+
+*   The source code tarball URL is automatically generated based on the tag (usually `https://github.com/<your-username>/ctrlspeak/archive/refs/tags/vX.Y.Z.tar.gz`).
+*   Download the tarball using its URL and calculate its SHA256 checksum:
+    ```bash
+    # Replace URL with the actual tarball link based on the tag
+    curl -sL https://github.com/<your-username>/ctrlspeak/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256
+    ```
+*   Clone or navigate to your Homebrew tap repository (e.g., `../homebrew-ctrlspeak`).
+*   Edit the formula file (e.g., `Formula/ctrlspeak.rb`):
+    *   Update the `url` line with the tag tarball URL.
+    *   Update the `sha256` line with the checksum you calculated.
+    *   *Optional:* Update the `version` line if necessary (though it's often inferred).
+    *   *Optional:* If `requirements.txt` or dependencies changed, update the `depends_on` and `install` steps accordingly.
+*   Commit and push the changes in the tap repository:
+    ```bash
+    cd ../path/to/homebrew-ctrlspeak # Or wherever your tap repo is
+    git add Formula/ctrlspeak.rb
+    git commit -m "Update ctrlspeak to vX.Y.Z"
+    git push
+    ```
+
+**4. Verify (Optional):**
+
+*   Run `brew update` locally to fetch the updated formula.
+*   Run `brew upgrade ctrlspeak` to install the new version.
+*   Test the installed version.
