@@ -1,0 +1,36 @@
+# ctrlspeak Project Rules & Conventions
+
+This file outlines the development environment setup and conventions for the `ctrlspeak` project. Please adhere to these rules in your responses and actions.
+
+## Environment Setup
+
+*   **Python Version:**
+    *   This project uses **Python 3.13.3**.
+    *   This version is managed by `pyenv`. Ensure `pyenv` is installed and the `3.13.3` version is available (`pyenv install 3.13.3`).
+    *   The `pyenv` global version should be set to `3.13.3` (`pyenv global 3.13.3`).
+    *   A `.python-version` file containing `3.13.3` should exist in the project root to enforce the version locally.
+*   **Virtual Environment:**
+    *   A virtual environment named `.venv` located in the project root **must** be used.
+    *   **Create (if needed):** `python -m venv .venv` (after ensuring the correct pyenv version is active) or `uv venv`.
+    *   **Activate:** `source .venv/bin/activate`
+    *   **Crucial:** Always ensure the virtual environment is active before installing packages or running the application.
+*   **Package Management:**
+    *   Use **`uv`** for all package and dependency management tasks.
+    *   Project dependencies are specified in `requirements.txt`.
+    *   **Install dependencies:** `uv pip install -r requirements.txt`
+    *   **Add a new package:** `uv pip install <package_name>`
+    *   **Update requirements file:** After adding/removing packages, run `uv pip freeze > requirements.txt` to update the file.
+    *   **Avoid:** Do not use `pip` directly unless specifically required for compatibility reasons not handled by `uv`.
+*   **Code Style & Linting:**
+    *   **Formatting:** Use `black` style, applied via `uv format .`.
+    *   **Linting:** Use `ruff` style, applied via `uv lint .`. (Configuration might be needed in `pyproject.toml` if customization is desired).
+
+## Running the Application
+
+*   The main entry point is `ctrlspeak.py` in the project root.
+*   Run using `python ctrlspeak.py` from the project root **after** activating the `.venv` environment.
+
+## Important Notes
+
+*   **Homebrew Python:** A separate Python installation managed by Homebrew (`/opt/homebrew/opt/python@3.13`) exists due to dependencies like `llvm`, `pillow`, etc. **Do not** attempt to uninstall this Homebrew Python, as it will break those tools. The `pyenv`-managed Python `3.13.3` is the primary one for development within this project.
+*   **Dependencies:** Ensure all required packages (like `sounddevice`) are installed *within* the active `.venv` environment using `uv`. 
