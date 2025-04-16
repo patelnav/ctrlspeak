@@ -359,6 +359,8 @@ def transcription_worker(model, work_queue, results_list):
             # --- End Phase 4 Transcription ---
 
             if text:
+                # Print the intermediate result (dimmed, no prefix) with a preceding newline
+                console.print(f"\n[dim]{text}[/dim]")
                 results_list.append(text)
 
             # 4. Clean up temp file (now happens in finally)
