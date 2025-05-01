@@ -78,8 +78,9 @@ def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description="ctrlSPEAK Test - Test transcription on an audio file")
     parser.add_argument("audio_file", help="Path to the audio file to transcribe")
-    parser.add_argument("--model", choices=["parakeet", "canary", "whisper"], default="parakeet",
-                        help="Model to use for transcription (default: parakeet)")
+    parser.add_argument("--model", choices=["parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], 
+                        default="parakeet-0.6b",
+                        help="Model to use for transcription (default: %(default)s)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
     

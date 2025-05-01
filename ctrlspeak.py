@@ -614,9 +614,10 @@ def exit_app():
 def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
-    parser.add_argument("--model", type=str, choices=["parakeet", "canary", "whisper"], 
+    parser.add_argument("--model", type=str, 
+                        choices=["parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], 
                         default=get_preferred_model(),
-                        help="Speech recognition model to use")
+                        help="Speech recognition model to use (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", 
                         help="Enable debug mode with verbose logging")
     return parser.parse_args()
@@ -663,10 +664,13 @@ def main():
         print_startup_info()
         
         # Create a welcome banner
+        # Use the loaded model's name and specific identifier
+        model_display_name = stt_model.name if stt_model else model_type # Fallback if model load failed somehow
+        model_identifier = stt_model.model_name if hasattr(stt_model, 'model_name') else 'N/A'
         console.print(Panel.fit(
-            "[bold cyan]ctrlSPEAK[/bold cyan] - A speech-to-text utility that runs in the background",
+            "[bold cyan]ctrlSPEAK[/bold cyan] - Ready to transcribe.",
             title="Welcome",
-            subtitle=f"Using {model_type} model",
+            subtitle=f"Model: [bold]{model_display_name}[/bold] ({model_identifier})",
             border_style="blue"
         ))
         

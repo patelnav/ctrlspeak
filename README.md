@@ -110,10 +110,11 @@ pip install -r requirements-whisper.txt
 
 ctrlSPEAK uses open-source speech recognition models:
 
-- **Parakeet** (default): NVIDIA NeMo's English-only model with high accuracy
-- **Canary**: NVIDIA NeMo's multilingual model supporting English, German, French, and Spanish
-- **Whisper** (optional): OpenAI's fast and accurate general-purpose speech recognition model
-  - To use Whisper, install additional dependencies: `uv pip install -r requirements-whisper.txt` or `pip install -r requirements-whisper.txt`
+- **Parakeet 0.6B** (default): NVIDIA NeMo's `nvidia/parakeet-tdt-0.6b-v2` model. Good balance of speed, accuracy, punctuation, and capitalization.
+- **Parakeet 1.1B**: NVIDIA NeMo's older `nvidia/parakeet-tdt-1.1b` model. Potentially higher accuracy in some cases, but lacks punctuation.
+- **Canary**: NVIDIA NeMo's `nvidia/canary-1b` multilingual model (En, De, Fr, Es) with punctuation, but can be slower.
+- **Whisper** (optional): OpenAI's `openai/whisper-large-v3-turbo` model. Fast and accurate general-purpose model.
+  - To use Whisper, install additional dependencies: `uv pip install -r requirements-whisper.txt`
 
 The models are automatically downloaded from HuggingFace the first time you use them.
 
@@ -123,12 +124,14 @@ You can specify which model to use with the `--model` flag:
 
 ```bash
 # Using Homebrew installation
-ctrlspeak --model parakeet  # Default
-ctrlspeak --model canary    # Multilingual with punctuation
-ctrlspeak --model whisper   # OpenAI's model
+ctrlspeak --model parakeet-0.6b  # Default
+ctrlspeak --model parakeet-1.1b  # Older, larger Parakeet
+ctrlspeak --model canary         # Multilingual with punctuation
+ctrlspeak --model whisper        # OpenAI's model
 
 # Using manual installation
-python ctrlspeak.py --model parakeet
+python ctrlspeak.py --model parakeet-0.6b
+python ctrlspeak.py --model parakeet-1.1b
 python ctrlspeak.py --model canary
 python ctrlspeak.py --model whisper
 ```
@@ -140,17 +143,19 @@ ctrlspeak --debug
 
 ## Models Tested
 
-1. **Parakeet (NVIDIA)** - `nvidia/parakeet-tdt-1.1b`
-2. **Canary (NVIDIA)** - `nvidia/canary-1b`
-3. **Whisper (OpenAI)** - `openai/whisper-large-v3-turbo`
+1. **Parakeet 0.6B (NVIDIA)** - `nvidia/parakeet-tdt-0.6b-v2` (Default)
+2. **Parakeet 1.1B (NVIDIA)** - `nvidia/parakeet-tdt-1.1b`
+3. **Canary (NVIDIA)** - `nvidia/canary-1b`
+4. **Whisper (OpenAI)** - `openai/whisper-large-v3-turbo`
 
 ## Performance Comparison
 
-| Model   | Load Time | Transcription Time | Transcription Quality | Output Example |
-|---------|-----------|-------------------|----------------------|----------------|
-| Parakeet | 14.84s    | 2.21s             | Good, without punctuation | "well i don't wish to see it any more observed phoebe turning away her eyes it is certainly very like the old portrait" |
-| Canary   | 8.00s     | 25.45s            | Excellent, with punctuation | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
-| Whisper  | 1.45s     | 2.23s             | Good, without punctuation | "well i don't wish to see it any more observed phoebe turning away her eyes it is certainly very like the old portrait" |
+| Model            | Load Time | Transcription Time | Transcription Quality         | Output Example (test.wav)                  |
+|------------------|-----------|-------------------|------------------------------|--------------------------------------------|
+| Parakeet 0.6B    | 5.17s     | 0.70s             | Good w/ Punct. & Caps.       | "Well, I don't wish to see it any more, observed Phebe, turning away her eyes. It is certainly very like the old portrait." |
+| Parakeet 1.1B    | 10.07s    | 1.08s             | Good, *no* punctuation       | "well i don't wish to see it any more observed phoebe turning away her eyes it is certainly very like the old portrait" |
+| Canary           | 8.15s     | 30.82s            | Good w/ Punct. & Caps.       | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| Whisper (large-v3) | 2.41s     | 12.78s            | Good, *no* punctuation       | "well i don't wish to see it any more observed phoebe turning away her eyes it is certainly very like the old portrait" |
 
 ## Permissions
 

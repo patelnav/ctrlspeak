@@ -39,7 +39,8 @@ def get_model():
     start_time = time.time()
     
     try:
-        model = nemo_asr.models.EncDecRNNTBPEModel.from_pretrained("nvidia/parakeet-tdt-1.1b")
+        # Use the new default 0.6b model
+        model = nemo_asr.models.EncDecRNNTBPEModel.from_pretrained("nvidia/parakeet-tdt-0.6b-v2")
         if device.type == "mps":
             model = model.to(device)
         

@@ -13,9 +13,9 @@ from typing import List
 logger = logging.getLogger("parakeet_model")
 
 class ParakeetModel(BaseSTTModel):
-    """Parakeet TDT 1.1B model for speech-to-text."""
+    """Parakeet TDT model family for speech-to-text."""
     
-    def __init__(self, model_name="nvidia/parakeet-tdt-1.1b", device=None, verbose=False):
+    def __init__(self, model_name="nvidia/parakeet-tdt-0.6b-v2", device=None, verbose=False):
         """Initialize the Parakeet model.
         
         Args:
@@ -119,7 +119,8 @@ class ParakeetModel(BaseSTTModel):
             logger.error(f"Error during transcription: {str(e)}")
             raise
     
-    @property
     def name(self):
         """Return the name of the model."""
-        return f"Parakeet-{self.model_name.split('/')[-1]}" 
+        # Extract a clean name like 'parakeet-tdt-0.6b-v2'
+        simple_name = self.model_name.split('/')[-1]
+        return f"Parakeet-{simple_name}" 
