@@ -20,7 +20,7 @@ import threading
 import argparse
 import logging
 import warnings
-import io
+# import io # Unused
 # Added imports for Phase 0
 import queue
 import numpy as np
@@ -28,6 +28,8 @@ import time as timer_module # Use alias to avoid conflict with time module used 
 # Phase 4: Imports needed for temp file handling in worker
 import tempfile
 import soundfile as sf
+from pathlib import Path # <<< Ensure this import is present
+from huggingface_hub import constants as hf_constants # Added for cache location
 print(f"Basic imports done... {time.time() - startup_time:.2f}s")
 
 # Early import of Rich console for first run message
@@ -47,12 +49,12 @@ if show_first_run_message:
     ))
 
 # Import UI and system libraries
-from AppKit import NSWorkspace
-import subprocess
-from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+# from AppKit import NSWorkspace # Unused
+import subprocess # Keep for permission opening
+# from rich.table import Table # Unused
+# from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn # Unused
 from rich.logging import RichHandler
-from rich.text import Text
+# from rich.text import Text # Unused
 print(f"UI imports done... {time.time() - startup_time:.2f}s")
 
 # Import ML libraries
@@ -62,6 +64,7 @@ print(f"Torch imported... {time.time() - startup_time:.2f}s")
 
 # Import our modules
 print(f"Starting app imports... {time.time() - startup_time:.2f}s")
+# <<< Keep only this first set of app imports >>>
 from models.factory import ModelFactory
 from utils.keyboard_shortcuts import KeyboardShortcutManager
 from utils.clipboard import copy_to_clipboard, paste_from_clipboard
@@ -103,14 +106,6 @@ class FilterNemoWarnings(logging.Filter):
 # Install the filter on the root logger
 logging.getLogger().addFilter(FilterNemoWarnings())
 
-# Now import the rest
-from models.factory import ModelFactory
-from utils.keyboard_shortcuts import KeyboardShortcutManager
-from utils.clipboard import copy_to_clipboard, paste_from_clipboard
-from utils.player import play_start_beep, play_stop_beep
-from utils.audio import AudioManager, check_microphone_permissions, SAMPLE_RATE, CHANNELS
-from utils import permission_manager
-
 # Configure NeMo's logger if available
 for logger_name in ['nemo', 'nemo_logger', 'nemo.collections']:
     logger = logging.getLogger(logger_name)
@@ -132,6 +127,15 @@ for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger',
     logging.getLogger(lib).setLevel(logging.CRITICAL)
     # Also apply our filter to each logger
     logging.getLogger(lib).addFilter(FilterNemoWarnings())
+
+# Define known model mappings (directory prefix -> CLI name)
+MODEL_CACHE_MAP = {
+    "models--nvidia--parakeet-tdt-0.6b-v2": "parakeet-0.6b",
+    "models--nvidia--parakeet-tdt-1.1b": "parakeet-1.1b",
+    "models--nvidia--canary-1b": "canary",
+    "models--openai--whisper-large-v3-turbo": "whisper",
+    # Add other models if supported in the future
+}
 
 def save_environment_variables():
     """Save current environment variables for later restoration"""
@@ -181,37 +185,6 @@ def setup_logging_for_mode(debug_mode):
     # --- Phase 0: Run Test ---
     # REMOVED FROM HERE
     # --- End Phase 0 Test Call ---
-
-def quiet_function(func, *args, **kwargs):
-    """Run a function with stdout and stderr redirected to /dev/null"""
-    if DEBUG_MODE:
-        # In debug mode, just run the function normally
-        return func(*args, **kwargs)
-    
-    # In non-debug mode, redirect stdout and stderr
-    null_file = open(os.devnull, 'w')
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
-    
-    # Temporarily make logging even more quiet
-    old_levels = {}
-    for name, logger in logging.root.manager.loggerDict.items():
-        if isinstance(logger, logging.Logger):
-            old_levels[name] = logger.level
-            logger.setLevel(logging.CRITICAL)
-    
-    try:
-        sys.stdout = null_file
-        sys.stderr = null_file
-        return func(*args, **kwargs)
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
-        null_file.close()
-        
-        # Restore logging levels
-        for name, level in old_levels.items():
-            logging.getLogger(name).setLevel(level)
 
 def print_startup_info():
     """Print startup information"""
@@ -271,13 +244,13 @@ stt_model = None  # Global model variable
 model_type = "parakeet"  # Default model type
 model_loaded = False  # Track whether the model has been loaded
 
-# --- Start: Phase 0 Async Infrastructure ---
+# --- Start: Async Infrastructure ---
 # Global variables for transcription worker
 transcribed_chunks = [] # Stores results from worker
 transcription_queue = queue.Queue() # Channel to send audio data to worker
-# transcription_active = threading.Event() # Phase 5: No longer needed
+# transcription_active = threading.Event() # Obsolete
 transcription_worker_thread = None # Holds the worker thread object
-# Phase 5 Shutdown Fix: Add global flag for main loop control
+# Flag to control main loop
 main_loop_active = True
 
 def transcription_worker(model, work_queue, results_list):
@@ -388,88 +361,10 @@ def transcription_worker(model, work_queue, results_list):
 
     logger.info("Transcription worker thread finished normally.")
 
-
-def test_async_infra():
-    """Tests the basic queue/worker/result mechanism with a mock model."""
-    print("[bold cyan]Starting Phase 0 Test: Async Infrastructure...[/bold cyan]")
-    test_logger = logging.getLogger("test_async")
-    test_logger.setLevel(logging.DEBUG) # Ensure debug messages from test are shown
-
-    # Use a simple lambda as the mock model for this test
-    mock_model = lambda data: f"mock_{len(data) if hasattr(data, '__len__') else 0}"
-    test_active = threading.Event()
-    test_active.set()
-    test_queue = queue.Queue()
-    test_results = []
-
-    # Pass our test logger and components to the worker
-    worker_thread = threading.Thread(
-        target=transcription_worker,
-        args=(mock_model, test_queue, test_results),
-        daemon=True, # So test failure doesn't hang the app
-        name="TestTranscriptionWorker"
-    )
-    worker_thread.start()
-    test_logger.info("Test worker thread started.")
-
-    # Put dummy data (NumPy arrays simulate audio chunks)
-    dummy_data1 = np.zeros(100, dtype=np.float32)
-    dummy_data2 = np.zeros(200, dtype=np.float32)
-    test_logger.info(f"Putting dummy data 1 (len {len(dummy_data1)}) onto queue...")
-    test_queue.put(dummy_data1)
-    test_logger.info(f"Putting dummy data 2 (len {len(dummy_data2)}) onto queue...")
-    test_queue.put(dummy_data2)
-
-    # Wait for the queue to be processed by the worker
-    test_logger.info("Waiting for test queue to join (all tasks done)...")
-    test_queue.join() # Blocks until task_done called for all items
-    test_logger.info("Test queue joined.")
-
-    # Signal the worker thread to stop its loop
-    test_logger.info("Signaling worker thread to stop...")
-    test_active.clear()
-
-    # Wait for the worker thread to actually terminate
-    test_logger.info("Waiting for worker thread to join (terminate)...")
-    worker_thread.join(timeout=2.0) # Wait max 2 seconds for thread to exit
-    if worker_thread.is_alive():
-         test_logger.error("Test worker thread did not terminate gracefully!")
-         print("[bold red]Async infrastructure test FAILED (Worker Thread Hang)[/bold red]")
-         return False
-
-    test_logger.info("Worker thread joined.")
-
-    # --- Verification ---
-    print(f"Test results collected: {test_results}")
-    passed = True
-    if len(test_results) != 2:
-        print(f"[bold red]Assertion Failed:[/bold red] Expected 2 results, got {len(test_results)}")
-        passed = False
-    else:
-        # Sort results as order isn't guaranteed if worker processes faster than put
-        test_results.sort(key=lambda x: int(x.split('_')[-1])) # Sort by the number len
-        # Correct the expected format to match the mock logic in transcription_worker
-        expected1 = f"mock_transcription_for_chunk_len_{len(dummy_data1)}"
-        expected2 = f"mock_transcription_for_chunk_len_{len(dummy_data2)}"
-        if test_results[0] != expected1:
-             print(f"[bold red]Assertion Failed:[/bold red] Expected result[0] '{expected1}', got '{test_results[0]}'")
-             passed = False
-        if test_results[1] != expected2:
-             print(f"[bold red]Assertion Failed:[/bold red] Expected result[1] '{expected2}', got '{test_results[1]}'")
-             passed = False
-
-    if passed:
-        print("[bold green]Async infrastructure test PASSED.[/bold green]")
-        return True
-    else:
-        print("[bold red]Async infrastructure test FAILED.[/bold red]")
-        return False
-
-# --- End: Phase 0 Async Infrastructure ---
-
 def get_model():
     """Load model with progress tracking"""
-    global stt_model, model_loaded
+    # model_type is accessed globally here, as set/resolved in main()
+    global stt_model, model_loaded, model_type 
     
     if stt_model is not None:
         return stt_model
@@ -477,12 +372,11 @@ def get_model():
     console.print("\n[bold yellow]Loading model... please wait[/bold yellow]")
     start_time = time.time()
     
-    # DIAGNOSTIC STEP 1: Simplified model loading approach from test_transcription.py
-    # DIAGNOSTIC STEP 2: Enhanced exception handling with detailed logging
     try:
-        # Step 1: Create model instance
+        # Step 1: Create model instance using the resolved global model_type
         logger.info(f"Step 1: Creating {model_type} model instance...")
         try:
+            # Pass the resolved model_type to the factory method
             stt_model = ModelFactory.get_model(model_type=model_type, device=device, verbose=DEBUG_MODE)
             logger.info("Model instance created successfully")
         except Exception as e:
@@ -525,7 +419,7 @@ def process_audio_thread():
 
 def on_activate():
     """Handle global hotkey activation"""
-    # Phase 5: Remove active_event logic, keep worker restart logic for now
+    # Remove obsolete comments/code
     global stt_model, model_loaded, audio_manager, transcribed_chunks, transcription_queue, transcription_worker_thread
     
     if not audio_manager.is_collecting:
@@ -537,14 +431,12 @@ def on_activate():
         transcribed_chunks.clear()
         logger.info("Cleared previous transcribed chunks.")
 
-        # Phase 5: Remove worker restart logic temporarily - Start worker once in main
-        # Revisit if worker *can* actually die unexpectedly
+        # Remove obsolete worker restart logic
         # if transcription_worker_thread is None or not transcription_worker_thread.is_alive():
-        #     logger.warning("Worker thread is not alive. Restarting it.")
-        #     transcription_worker_thread = threading.Thread(...)
-        #     transcription_worker_thread.start()
+        #    ...
         
-        # Remove transcription_active.set()
+        # logger.debug("Setting transcription_active event.") # Obsolete
+        # transcription_active.set() # Obsolete
 
         # ... (Play beep)
         logger.debug("Playing start beep...")
@@ -557,9 +449,9 @@ def on_activate():
         play_stop_beep() # Play beep immediately on stop trigger
         audio_manager.stop_recording() # Queues audio data
         
-        # Phase 5: Remove active_event clearing, keep queue.join()
+        # Wait for queue processing
         logger.info("Waiting for transcription worker to finish processing queue...")
-        # transcription_active.clear() # No longer needed
+        # transcription_active.clear() # Obsolete
         transcription_queue.join() 
         logger.info("Transcription queue processed.")
         
@@ -580,7 +472,7 @@ def on_activate():
 
 def exit_app():
     """Initiates the application shutdown sequence."""
-    # Phase 5 Shutdown Fix: Use flag to break main loop
+    # Use flag to break main loop
     global audio_manager, transcription_worker_thread, transcription_queue, keyboard_manager, main_loop_active
     
     logger.info("Shutdown requested.")
@@ -615,39 +507,105 @@ def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
     parser.add_argument("--model", type=str, 
-                        choices=["parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], 
+                        choices=["parakeet", "parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], # Allow generic parakeet here
                         default=get_preferred_model(),
                         help="Speech recognition model to use (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", 
                         help="Enable debug mode with verbose logging")
+    parser.add_argument("--check-only", action="store_true", # <<< Add check-only flag
+                        help="Check model cache and configuration, then exit.")
     return parser.parse_args()
+
+def find_cached_models(): # Takes no arguments
+    """Scans the Hugging Face cache directory for known ctrlspeak models."""
+    cached = set()
+    try:
+        # Use huggingface_hub to find the cache directory reliably
+        cache_dir = Path(hf_constants.HF_HUB_CACHE)
+        logger.info(f"Checking Hugging Face cache at: {cache_dir}")
+
+        if not cache_dir.is_dir():
+            logger.warning(f"Hugging Face cache directory not found: {cache_dir}")
+            return cached
+
+        for item in cache_dir.iterdir():
+            # Check if it's a directory and matches one of our known model prefixes
+            if item.is_dir() and item.name in MODEL_CACHE_MAP:
+                cached.add(MODEL_CACHE_MAP[item.name])
+                logger.debug(f"Found cached model directory: {item.name} -> {MODEL_CACHE_MAP[item.name]}")
+
+    except Exception as e:
+        logger.error(f"Error scanning Hugging Face cache: {e}", exc_info=DEBUG_MODE)
+        console.print(f"[yellow]Warning: Could not scan Hugging Face cache ({e})[/yellow]")
+
+    logger.info(f"Found cached models: {cached}")
+    return cached
 
 def main():
     """Main application entry point"""
-    # Phase 5: Add main_loop_active to globals
+    # Use flag to control main loop
     global model_type, DEBUG_MODE, audio_manager, stt_model, transcription_worker_thread, transcribed_chunks, transcription_queue, main_loop_active
     
-    # DIAGNOSTIC STEP 3: Save environment variables at the start
+    # Save environment variables at the start
     saved_env_vars = save_environment_variables()
     
     try:
         # Parse command-line arguments
         args = parse_arguments()
         DEBUG_MODE = args.debug
-        model_type = args.model
-        
+        model_type_arg = args.model # Get the raw argument
+
+        # --- Resolve potential model alias using the factory --- 
+        # This updates the global model_type variable used by get_model()
+        model_type = ModelFactory.resolve_model_alias(model_type_arg)
+        # --- End resolution ---
+
         # Setup logging
         setup_logging_for_mode(DEBUG_MODE)
 
+        # --- Check Cache EARLY ---
+        logger.info("Scanning for cached models...")
+        # Call find_cached_models without arguments
+        cached_models = find_cached_models() 
+        # --- End Cache Check ---
+
+        # --- Display Model Selection Info BEFORE Loading ---
+        console.print("\n[bold]Model Configuration:[/bold]")
+        # Display the original argument and the resolved type
+        if model_type_arg.lower() != model_type.lower():
+             console.print(f"  Selected (alias): [cyan]{model_type_arg}[/cyan] -> Resolved: [cyan]{model_type}[/cyan]")
+        else:
+             console.print(f"  Selected: [cyan]{model_type}[/cyan]")
+        
+        if cached_models:
+            # Check cache using the *resolved* global model_type
+            other_cached = sorted(list(cached_models - {model_type})) 
+            if model_type in cached_models:
+                 console.print(f"  Status: [green]Found in cache[/green]")
+            else:
+                 console.print(f"  Status: [yellow]Not found in cache (will be downloaded)[/yellow]")
+
+            if other_cached:
+                console.print(f"  Other cached models available: {', '.join(other_cached)}")
+        else:
+            console.print("  [yellow]Cache status unknown (or cache empty/inaccessible)[/yellow]")
+        # --- End Model Selection Info ---
+
+        # --- Handle --check-only flag ---
+        if args.check_only:
+            console.print("\n[bold cyan]--check-only specified. Exiting now.[/bold cyan]")
+            sys.exit(0)
+        # --- End --check-only handling ---
+
         # Check permissions first
-        logger.debug("Checking permissions...") # Log before IF
+        logger.debug("Checking permissions...") # Keep useful debug logs
         if not check_permissions():
             logger.warning("Permission check failed.")
             return 1
         logger.debug("Permission check passed.")
 
         # Update configuration after first run
-        logger.debug("Checking if first run...") # Log before IF
+        logger.debug("Checking if first run...")
         if is_first_run():
             logger.info("First run detected, marking complete.")
             mark_first_run_complete()
@@ -656,21 +614,20 @@ def main():
         # Save the selected model as preferred
         set_preferred_model(model_type)
         
-        # Phase 1: Pass transcription_queue to AudioManager
+        # Pass transcription_queue to AudioManager
         logger.debug("Initializing AudioManager...")
         audio_manager = AudioManager(transcription_queue=transcription_queue, debug_mode=DEBUG_MODE)
         
         # Print startup info based on debug mode
         print_startup_info()
         
-        # Create a welcome banner
-        # Use the loaded model's name and specific identifier
-        model_display_name = stt_model.name if stt_model else model_type # Fallback if model load failed somehow
-        model_identifier = stt_model.model_name if hasattr(stt_model, 'model_name') else 'N/A'
+        # Create a welcome banner (using selected type, actual details later)
+        # Remove commented out banner details
         console.print(Panel.fit(
             "[bold cyan]ctrlSPEAK[/bold cyan] - Ready to transcribe.",
             title="Welcome",
-            subtitle=f"Model: [bold]{model_display_name}[/bold] ({model_identifier})",
+            # Use model_type here initially, actual name/id after loading
+            subtitle=f"Model: [bold]{model_type}[/bold] (Loading...)",
             border_style="blue"
         ))
         
@@ -681,17 +638,25 @@ def main():
         keyboard_manager.register_shortcut('<alt>+<esc>', exit_app)
         logger.debug("Keyboard shortcuts registered. Listener thread will start later.")
         
-        # DIAGNOSTIC STEP 3: Restore environment variables before loading model
+        # Remove diagnostic step comment
         restore_environment_variables(saved_env_vars)
         
         # Load model immediately on startup
         logger.debug("Calling get_model()...")
-        stt_model = get_model()
+        # get_model() will use the resolved global model_type 
+        stt_model = get_model() 
         logger.debug(f"get_model() returned: {type(stt_model)}") # Log type
         if not stt_model:
              console.print("[bold red]Failed to load STT model. Exiting.[/bold red]")
              return 1 # Exit if model loading failed
         logger.info("Model loaded successfully.")
+
+        # Remove commented out banner update
+        # # --- Update Welcome Banner AFTER Model Load ---
+        # # Optionally, update the banner if you want more specific info like the exact HF path
+        # # This might require modifying how the Panel is stored or re-printing it.
+        # # For simplicity, we'll skip re-printing the banner for now. The initial one shows the type.
+        # # --- End Banner Update ---
 
         # --- Start Transcription Worker Thread ---
         logger.info("Starting transcription worker thread...")
@@ -715,7 +680,7 @@ def main():
              logger.info("Audio stream started successfully.")
              logger.info("Application ready. Waiting for keyboard events (or Ctrl+C)...")
              
-             # Phase 5 Shutdown Fix: Replace join() with controlled loop
+             # Use controlled loop for keep-alive
              logger.debug("Entering main keep-alive loop...")
              while main_loop_active:
                  timer_module.sleep(0.5) # Keep main thread alive but idle
@@ -728,7 +693,7 @@ def main():
         exit_app() # Graceful shutdown via exit_app
     finally:
         # --- Definitive Cleanup --- 
-        # Shutdown Log: Add log at start of finally
+        # Remove shutdown log comment
         logger.info("Executing main finally block for cleanup...")
         
         # 1. Ensure keyboard listener is stopped
@@ -760,10 +725,10 @@ def main():
         logger.debug("Finally: None sentinel placed on queue.")
         
         if transcription_worker_thread and transcription_worker_thread.is_alive():
-            # Shutdown Log: Add log before worker join
+            # Remove shutdown log comment
             logger.info("Finally: Waiting for transcription worker thread to join...")
             transcription_worker_thread.join(timeout=3.0) 
-            # Shutdown Log: Add log after worker join attempt
+            # Remove shutdown log comment
             if transcription_worker_thread.is_alive():
                 logger.warning("Finally: Transcription worker thread did NOT join after timeout.")
             else:
@@ -781,7 +746,15 @@ def main():
         console.print("[bold green]ctrlSPEAK stopped.[/bold green]")
         # Allow natural exit instead of os._exit()
         # Phase 5 Shutdown Fix: Explicitly exit if main thread reaches here
-        sys.exit(0)
+        # Only exit if not handling an exception that already caused an exit
+        if 'args' in locals() and not args.check_only: # Avoid double exit if check_only was used
+             sys.exit(0)
 
 if __name__ == "__main__":
+    # Remove commented out test call
+    # # --- Phase 0 Test Call ---
+    # # Uncomment the line below to run the test *before* the main application logic
+    # # test_async_infra()
+    # # --- End Phase 0 Test Call ---
+
     main() 

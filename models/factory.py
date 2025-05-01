@@ -13,12 +13,26 @@ logger = logging.getLogger("model_factory")
 class ModelFactory:
     """Factory for creating speech-to-text models."""
     
+    # Mapping from user-friendly aliases to specific model identifiers
+    _DEFAULT_ALIASES = {
+        "parakeet": "parakeet-0.6b" # Default parakeet maps to 0.6b
+    }
+
+    @classmethod
+    def resolve_model_alias(cls, model_name: str) -> str:
+        """Resolves a potential model alias to its specific model name."""
+        name_lower = model_name.lower()
+        resolved_name = cls._DEFAULT_ALIASES.get(name_lower, model_name)
+        if resolved_name != model_name:
+            logger.info(f"Resolved model alias ''{model_name}'' to ''{resolved_name}''.")
+        return resolved_name
+
     @staticmethod
     def get_model(model_type, verbose=False, **kwargs):
         """Get a speech-to-text model.
         
         Args:
-            model_type: The type of model to create.
+            model_type: The specific type of model to create (aliases should be resolved beforehand).
             verbose: Whether to enable verbose logging.
             **kwargs: Additional arguments to pass to the model constructor.
             
@@ -29,6 +43,8 @@ class ModelFactory:
             ValueError: If the model type is not supported.
             ImportError: If Whisper dependencies are not installed.
         """
+        # Alias resolution should happen *before* calling this method.
+        # The input model_type is expected to be specific now.
         model_type = model_type.lower()
         
         # Configure logging
@@ -42,12 +58,7 @@ class ModelFactory:
         # Include verbose parameter in kwargs
         kwargs['verbose'] = verbose
         
-        if model_type == "parakeet":
-            logger.warning("Using generic 'parakeet' type. Defaulting to nvidia/parakeet-tdt-0.6b-v2.")
-            logger.warning("Please use 'parakeet-0.6b' or 'parakeet-1.1b' in the future.")
-            logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-0.6b-v2")
-            return ParakeetModel(model_name="nvidia/parakeet-tdt-0.6b-v2", **kwargs)
-        elif model_type == "parakeet-0.6b":
+        if model_type == "parakeet-0.6b":
             logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-0.6b-v2")
             return ParakeetModel(model_name="nvidia/parakeet-tdt-0.6b-v2", **kwargs)
         elif model_type == "parakeet-1.1b":
