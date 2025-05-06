@@ -138,7 +138,7 @@ class CanaryModel(BaseSTTModel):
             logger.debug(f"Transcription completed in {transcribe_time:.2f} seconds")
             
             # Clean up each result
-            transcriptions = [self._clean_text(text) for text in raw_result]
+            transcriptions = [self._clean_text(text.text) for text in raw_result]
             
             end_time = time.time()
             logger.info(f"Transcription completed in {end_time - start_time:.2f} seconds")
