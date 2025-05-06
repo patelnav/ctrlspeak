@@ -112,7 +112,8 @@ ctrlSPEAK uses open-source speech recognition models:
 
 - **Parakeet 0.6B** (default): NVIDIA NeMo's `nvidia/parakeet-tdt-0.6b-v2` model. Good balance of speed, accuracy, punctuation, and capitalization.
 - **Parakeet 1.1B**: NVIDIA NeMo's older `nvidia/parakeet-tdt-1.1b` model. Potentially higher accuracy in some cases, but lacks punctuation.
-- **Canary**: NVIDIA NeMo's `nvidia/canary-1b` multilingual model (En, De, Fr, Es) with punctuation, but can be slower.
+- **Canary**: NVIDIA NeMo's `nvidia/canary-1b-flash` multilingual model (En, De, Fr, Es) with punctuation, but can be slower.
+- **Canary**: NVIDIA NeMo's `nvidia/canary-180m-flash` multilingual model (En, De, Fr, Es) with punctuation, very small and less accurate.
 - **Whisper** (optional): OpenAI's `openai/whisper-large-v3-turbo` model. Fast and accurate general-purpose model.
   - To use Whisper, install additional dependencies: `uv pip install -r requirements-whisper.txt`
 
@@ -127,16 +128,19 @@ You can specify which model to use with the `--model` flag:
 ctrlspeak --model parakeet-0.6b  # Default
 ctrlspeak --model parakeet-1.1b  # Older, larger Parakeet
 ctrlspeak --model canary         # Multilingual with punctuation
+ctrlspeak --model canary-180m    # Multilingual with punctuation, small
 ctrlspeak --model whisper        # OpenAI's model
 
 # Using manual installation
 python ctrlspeak.py --model parakeet-0.6b
 python ctrlspeak.py --model parakeet-1.1b
 python ctrlspeak.py --model canary
+python ctrlspeak.py --model canary-180m
 python ctrlspeak.py --model whisper
 ```
 
 For debugging, you can use the `--debug` flag:
+
 ```bash
 ctrlspeak --debug
 ```
@@ -145,8 +149,9 @@ ctrlspeak --debug
 
 1. **Parakeet 0.6B (NVIDIA)** - `nvidia/parakeet-tdt-0.6b-v2` (Default)
 2. **Parakeet 1.1B (NVIDIA)** - `nvidia/parakeet-tdt-1.1b`
-3. **Canary (NVIDIA)** - `nvidia/canary-1b`
-4. **Whisper (OpenAI)** - `openai/whisper-large-v3-turbo`
+3. **Canary (NVIDIA)** - `nvidia/canary-1b-flash`
+4. **Canary (NVIDIA)** - `nvidia/canary-180m-flash`
+5. **Whisper (OpenAI)** - `openai/whisper-large-v3-turbo`
 
 ## Performance Comparison
 

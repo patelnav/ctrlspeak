@@ -14,4 +14,4 @@ soundfile
 # UI and system integration
 pynput     # For keyboard shortcuts
 pyperclip  # For clipboard operations
-rich>=13.6.0  # For terminal UI 
+rich>=13.6.0  # For terminal UI
