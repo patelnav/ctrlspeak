@@ -13,9 +13,10 @@ from typing import List
 logger = logging.getLogger("canary_model")
 
 class CanaryModel(BaseSTTModel):
-    """Canary 1B model for multilingual speech-to-text and translation."""
-    
-    def __init__(self, model_name="nvidia/canary-1b", device=None, verbose=False):
+    """Canary model for multilingual speech-to-text and translation.
+    Defaults to 'nvidia/canary-1b-flash' if no model_name is specified."""
+
+    def __init__(self, model_name="nvidia/canary-1b-flash", device=None, verbose=False):
         """Initialize the Canary model.
         
         Args:
@@ -68,9 +69,6 @@ class CanaryModel(BaseSTTModel):
             decode_cfg = self.model.cfg.decoding
             decode_cfg.strategy = 'beam'
             decode_cfg.beam.beam_size = 1
-            decode_cfg.beam.return_best_hypothesis = True
-            decode_cfg.preserve_alignments = None
-            decode_cfg.compute_langs = False
             self.model.change_decoding_strategy(decode_cfg)
             
             # Convert model to float32 before device placement

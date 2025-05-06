@@ -121,8 +121,8 @@ logging.basicConfig(
 logger = logging.getLogger("ctrlspeak")
 
 # Silence all the noisy libraries
-for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger', 
-           'nemo.collections', 'pytorch_lightning', 'filelock', 
+for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger',
+           'nemo.collections', 'pytorch_lightning', 'filelock',
            'huggingface_hub', 'transformers', 'sound_player']:
     logging.getLogger(lib).setLevel(logging.CRITICAL)
     # Also apply our filter to each logger
@@ -132,7 +132,8 @@ for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger',
 MODEL_CACHE_MAP = {
     "models--nvidia--parakeet-tdt-0.6b-v2": "parakeet-0.6b",
     "models--nvidia--parakeet-tdt-1.1b": "parakeet-1.1b",
-    "models--nvidia--canary-1b": "canary",
+    "models--nvidia--canary-1b-flash": "canary",
+    "models--nvidia--canary-180m-flash": "canary-180m",
     "models--openai--whisper-large-v3-turbo": "whisper",
     # Add other models if supported in the future
 }
@@ -507,7 +508,7 @@ def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
     parser.add_argument("--model", type=str, 
-                        choices=["parakeet", "parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], # Allow generic parakeet here
+                        choices=["parakeet", "parakeet-0.6b", "parakeet-1.1b", "canary", "canary-180m", "whisper"], # Allow generic parakeet here
                         default=get_preferred_model(),
                         help="Speech recognition model to use (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", 

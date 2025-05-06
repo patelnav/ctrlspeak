@@ -5,7 +5,6 @@ from models.parakeet import ParakeetModel
 from models.canary import CanaryModel
 import logging
 import importlib.util
-import sys
 
 # Configure logging
 logger = logging.getLogger("model_factory")
@@ -65,8 +64,11 @@ class ModelFactory:
             logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-1.1b")
             return ParakeetModel(model_name="nvidia/parakeet-tdt-1.1b", **kwargs)
         elif model_type == "canary":
-            logger.debug("Initializing CanaryModel")
-            return CanaryModel(**kwargs)
+            logger.debug("Initializing CanaryModel (defaulting to nvidia/canary-1b-flash)")
+            return CanaryModel(**kwargs) # CanaryModel now defaults to 1b-flash
+        elif model_type == "canary-180m":
+            logger.debug("Initializing CanaryModel with nvidia/canary-180m-flash")
+            return CanaryModel(model_name="nvidia/canary-180m-flash", **kwargs)
         elif model_type == "whisper":
             # Check if Whisper dependencies are installed
             if importlib.util.find_spec("transformers") is None:
