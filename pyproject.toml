@@ -11,15 +11,14 @@ authors = [
     {name = "Nav Patel", email = "nav@abhi.in"},
 ]
 license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = "~=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS :: MacOS X",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Topic :: Text Processing",
 ]

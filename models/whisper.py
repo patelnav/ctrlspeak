@@ -6,7 +6,7 @@ import os
 import torch
 import logging
 from models.base_model import BaseSTTModel
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline, WhisperProcessor
 from typing import List
 
 # Configure logging
@@ -15,7 +15,7 @@ logger = logging.getLogger("whisper_model")
 class WhisperModel(BaseSTTModel):
     """Whisper model for speech-to-text with accurate word timestamps."""
     
-    def __init__(self, model_name="openai/whisper-large-v3-turbo", device=None, verbose=False):
+    def __init__(self, model_name="openai/whisper-large-v3", device=None, verbose=False):
         """Initialize the Whisper model.
         
         Args:
@@ -63,7 +63,7 @@ class WhisperModel(BaseSTTModel):
             # Load model and processor
             logger.debug("Initializing AutoModelForSpeechSeq2Seq and AutoProcessor...")
             
-            self.processor = AutoProcessor.from_pretrained(self.model_name)
+            self.processor = WhisperProcessor.from_pretrained(self.model_name, language="en")
             
             # Load model with appropriate dtype
             self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
@@ -132,7 +132,7 @@ class WhisperModel(BaseSTTModel):
                 with torch.amp.autocast(self.device.type, dtype=self.amp_dtype, enabled=self.use_amp):
                     with torch.no_grad():
                         # Process the audio with simpler parameters
-                        result = self.pipe(audio_path)
+                        result = self.pipe(audio_path, generate_kwargs={"language": "<|en|>", "task": "translate"})
                         # Clean up the result
                         transcriptions.append(self._clean_text(result["text"]))
             
