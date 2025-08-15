@@ -227,7 +227,10 @@ def main():
         console = Console()
         console.print("\n[bold]Supported Models:[/bold]")
         for alias, model_name in ModelFactory._DEFAULT_ALIASES.items():
-            console.print(f"  - [cyan]{alias}[/cyan]: {model_name}")
+            note = ""
+            if "mlx" in alias:
+                note = " (Apple Silicon / MLX)"
+            console.print(f"  - [cyan]{alias}[/cyan]: {model_name}{note}")
         sys.exit(0)
 
     run_app(args)

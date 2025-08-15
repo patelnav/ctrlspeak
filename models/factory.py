@@ -5,6 +5,8 @@ from models.parakeet import ParakeetModel
 from models.canary import CanaryModel
 import logging
 import importlib.util
+import platform
+import sys
 
 # Configure logging
 logger = logging.getLogger("model_factory")
@@ -15,6 +17,7 @@ class ModelFactory:
     # Mapping from user-friendly aliases to specific model identifiers
     _DEFAULT_ALIASES = {
         "parakeet": "nvidia/parakeet-tdt-0.6b-v3",
+        "parakeet-mlx": "mlx-community/parakeet-tdt-0.6b-v2",
         "canary": "nvidia/canary-1b-flash",
         "canary-180m": "nvidia/canary-180m-flash",
         "canary-v2": "nvidia/canary-1b-v2",
@@ -50,6 +53,22 @@ class ModelFactory:
         # The input model_type is expected to be specific now.
         model_type = model_type.lower()
         
+        # Check for MLX model
+        if "mlx" in model_type:
+            if sys.platform != "darwin" or platform.machine() != "arm64":
+                logger.error("MLX models are only supported on Apple Silicon (macOS arm64).")
+                raise ValueError("MLX models are only supported on Apple Silicon (macOS arm64).")
+            
+            try:
+                from models.parakeet_mlx import ParakeetMLXModel
+                logger.debug("Initializing ParakeetMLXModel")
+                return ParakeetMLXModel(model_name=model_type, **kwargs)
+            except ImportError:
+                logger.error("MLX dependencies not found. Please install them using:\n"
+                             "uv pip install -r requirements-mlx.txt")
+                raise ImportError("MLX dependencies not found. Please install them using:\n"
+                                  "uv pip install -r requirements-mlx.txt")
+
         # Configure logging
         if verbose:
             logger.setLevel(logging.DEBUG)

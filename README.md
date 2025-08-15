@@ -130,17 +130,33 @@ ctrlspeak --list-models
 
 This will output a list of the available model aliases and their corresponding Hugging Face model names.
 
-### Model Selection
+### Apple Silicon (MLX) Acceleration
 
-You can specify which model to use with the `--model` flag. You can use a short name or a full model URL from Hugging Face.
+For users on Apple Silicon (M1/M2/M3 Macs), an optimized version of the Parakeet model is available using Apple's MLX framework. This can provide a significant performance boost.
+
+To use the MLX-accelerated model:
+
+1.  **Install MLX dependencies:**
+    ```bash
+    uv pip install -r requirements-mlx.txt
+    ```
+
+2.  **Run with the MLX model:**
+    ```bash
+    ctrlspeak --model parakeet-mlx
+    ```
+
+## Model Selection
+
+You can select a model using the `--model` flag. You can use either the full model name from HuggingFace or a short alias.
 
 **Short Names:**
 
 *   `parakeet`: NVIDIA's Parakeet TDT 0.6B model (v3).
 *   `canary`: NVIDIA's Canary 1B Flash model.
 *   `canary-180m`: NVIDIA's Canary 180M Flash model.
-*   `canary-v2`: NVIDIA's Canary 1B v2 model.
-*   `whisper`: OpenAI's Whisper Large v3 model.
+*   `parakeet-mlx`: Parakeet 0.6B optimized for Apple Silicon (MLX).
+*   `whisper`: OpenAI's Whisper v3 model.
 
 **Full Model URL:**
 
@@ -159,6 +175,7 @@ ctrlspeak --model canary         # Multilingual with punctuation
 ctrlspeak --model canary-180m    # The smaller Canary model
 ctrlspeak --model canary-v2
 ctrlspeak --model whisper        # OpenAI's model
+ctrlspeak --model parakeet-mlx # MLX-accelerated model
 
 # Using manual installation
 python ctrlspeak.py --model parakeet
@@ -166,6 +183,7 @@ python ctrlspeak.py --model canary
 python ctrlspeak.py --model canary-180m
 python ctrlspeak.py --model canary-v2
 python ctrlspeak.py --model whisper
+python ctrlspeak.py --model parakeet-mlx
 ```
 
 For debugging, you can use the `--debug` flag:
@@ -185,11 +203,16 @@ ctrlspeak --debug
 
 ## Performance Comparison
 
-| Model | Load Time | Transcription Time | Transcription Quality | Output Example (test.wav) |
-|---|---|---|---|---|
-| Parakeet 0.6B (v3) | 12.15s | 1.36s | Good w/ Punct. & Caps. | "Well, I don't wish to see it any more, observed Phebe, turning away her eyes. It is certainly very like the old portrait." |
-| Canary | 7.85s | 3.95s | Good w/ Punct. & Caps. | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
-| Whisper (large-v3) | 3.77s | 6.01s | Excellent w/ Punct. & Caps. | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| Model                                                    | Load Time (s) | Transcription Time (s) | Notes                                            |
+| -------------------------------------------------------- | ------------- | ---------------------- | ------------------------------------------------ |
+| **`nvidia/parakeet-tdt-0.6b-v3`** (NeMo/PyTorch)         | 14.83         | 1.44                   | Default model, good balance.                     |
+| **`mlx-community/parakeet-tdt-0.6b-v2`** (Apple Silicon) | **0.31**      | **1.14**               | **Recommended for Apple Silicon.** Much faster load. |
+| **`nvidia/canary-1b-flash`**                             | 8.09          | 3.30                   | Fast multilingual model.                         |
+| **`nvidia/canary-180m-flash`**                           | 2.33          | 3.35                   | Smaller, faster multilingual model.              |
+| **`nvidia/canary-1b-v2`**                                | 13.96         | 4.85                   | Newer multilingual model.                        |
+| **`openai/whisper-large-v3`**                            | 6.2           | 1.8                    | Very accurate, but slower transcription.         |
+
+*Testing performed on a MacBook Pro (M2 Max) with a 7-second audio file (`test.wav`). Your results may vary.*
 
 **Note:** Whisper model uses translate mode to enable proper punctuation and capitalization for English transcription.
 
