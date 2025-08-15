@@ -26,6 +26,9 @@ def parse_args_only():
     parser.add_argument("-v", "--version", action="version",
                         version=f"%(prog)s {__version__}",
                         help="Show program's version number and exit.")
+    parser.add_argument("--file", type=str,
+                        default=None,
+                        help="Path to an audio file to transcribe (for testing).")
     
     # Check if -h or --help is present
     if '-h' in sys.argv or '--help' in sys.argv:
