@@ -14,10 +14,10 @@ logger = logging.getLogger("parakeet_model")
 
 class ParakeetModel(BaseSTTModel):
     """Parakeet TDT model family for speech-to-text."""
-    
-    def __init__(self, model_name="nvidia/parakeet-tdt-0.6b-v2", device=None, verbose=False):
+
+    def __init__(self, model_name="nvidia/parakeet-tdt-0.6b-v3", device=None, verbose=False):
         """Initialize the Parakeet model.
-        
+
         Args:
             model_name: The name of the pretrained model to load.
             device: The device to run the model on (handled automatically by NeMo).

@@ -130,7 +130,7 @@ for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger',
 
 # Define known model mappings (directory prefix -> CLI name)
 MODEL_CACHE_MAP = {
-    "models--nvidia--parakeet-tdt-0.6b-v2": "parakeet-0.6b",
+    "models--nvidia--parakeet-tdt-0.6b-v3": "parakeet-0.6b",
     "models--nvidia--parakeet-tdt-1.1b": "parakeet-1.1b",
     "models--nvidia--canary-1b": "canary",
     "models--openai--whisper-large-v3-turbo": "whisper",

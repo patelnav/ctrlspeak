@@ -59,8 +59,8 @@ class ModelFactory:
         kwargs['verbose'] = verbose
         
         if model_type == "parakeet-0.6b":
-            logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-0.6b-v2")
-            return ParakeetModel(model_name="nvidia/parakeet-tdt-0.6b-v2", **kwargs)
+            logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-0.6b-v3")
+            return ParakeetModel(model_name="nvidia/parakeet-tdt-0.6b-v3", **kwargs)
         elif model_type == "parakeet-1.1b":
             logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-1.1b")
             return ParakeetModel(model_name="nvidia/parakeet-tdt-1.1b", **kwargs)

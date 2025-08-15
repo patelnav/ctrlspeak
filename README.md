@@ -110,7 +110,7 @@ pip install -r requirements-whisper.txt
 
 ctrlSPEAK uses open-source speech recognition models:
 
-- **Parakeet 0.6B** (default): NVIDIA NeMo's `nvidia/parakeet-tdt-0.6b-v2` model. Good balance of speed, accuracy, punctuation, and capitalization.
+- **Parakeet 0.6B** (default): NVIDIA NeMo's `nvidia/parakeet-tdt-0.6b-v3` model. Good balance of speed, accuracy, punctuation, and capitalization.
 - **Parakeet 1.1B**: NVIDIA NeMo's older `nvidia/parakeet-tdt-1.1b` model. Potentially higher accuracy in some cases, but lacks punctuation.
 - **Canary**: NVIDIA NeMo's `nvidia/canary-1b` multilingual model (En, De, Fr, Es) with punctuation, but can be slower.
 - **Whisper** (optional): OpenAI's `openai/whisper-large-v3` model. A fast, accurate, and powerful model that includes excellent punctuation and capitalization.
@@ -143,7 +143,7 @@ ctrlspeak --debug
 
 ## Models Tested
 
-1. **Parakeet 0.6B (NVIDIA)** - `nvidia/parakeet-tdt-0.6b-v2` (Default)
+1. **Parakeet 0.6B (NVIDIA)** - `nvidia/parakeet-tdt-0.6b-v3` (Default)
 2. **Parakeet 1.1B (NVIDIA)** - `nvidia/parakeet-tdt-1.1b`
 3. **Canary (NVIDIA)** - `nvidia/canary-1b`
 4. **Whisper (OpenAI)** - `openai/whisper-large-v3`

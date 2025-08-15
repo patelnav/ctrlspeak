@@ -40,7 +40,7 @@ def get_model():
     
     try:
         # Use the new default 0.6b model
-        model = nemo_asr.models.EncDecRNNTBPEModel.from_pretrained("nvidia/parakeet-tdt-0.6b-v2")
+        model = nemo_asr.models.EncDecRNNTBPEModel.from_pretrained("nvidia/parakeet-tdt-0.6b-v3")
         if device.type == "mps":
             model = model.to(device)
         
