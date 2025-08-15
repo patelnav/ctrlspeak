@@ -5,7 +5,6 @@ from models.parakeet import ParakeetModel
 from models.canary import CanaryModel
 import logging
 import importlib.util
-import sys
 
 # Configure logging
 logger = logging.getLogger("model_factory")
@@ -16,7 +15,8 @@ class ModelFactory:
     # Mapping from user-friendly aliases to specific model identifiers
     _DEFAULT_ALIASES = {
         "parakeet": "nvidia/parakeet-tdt-0.6b-v3",
-        "canary": "nvidia/canary-1b",
+        "canary": "nvidia/canary-1b-flash",
+        "canary-180m": "nvidia/canary-180m-flash",
         "whisper": "openai/whisper-large-v3"
     }
 

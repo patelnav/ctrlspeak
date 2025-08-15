@@ -9,6 +9,7 @@ def parse_args_only():
     """Parse command-line arguments without loading heavy libraries."""
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
     parser.add_argument("--model", type=str, 
+                        choices=["parakeet", "parakeet-0.6b", "parakeet-1.1b", "canary", "canary-180m", "whisper"],
                         default=get_preferred_model(),
                         help="Speech recognition model to use (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", 
