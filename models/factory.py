@@ -15,7 +15,9 @@ class ModelFactory:
     
     # Mapping from user-friendly aliases to specific model identifiers
     _DEFAULT_ALIASES = {
-        "parakeet": "parakeet-0.6b" # Default parakeet maps to 0.6b
+        "parakeet": "nvidia/parakeet-tdt-0.6b-v3",
+        "canary": "nvidia/canary-1b",
+        "whisper": "openai/whisper-large-v3"
     }
 
     @classmethod
@@ -58,16 +60,14 @@ class ModelFactory:
         # Include verbose parameter in kwargs
         kwargs['verbose'] = verbose
         
-        if model_type == "parakeet-0.6b":
-            logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-0.6b-v3")
-            return ParakeetModel(model_name="nvidia/parakeet-tdt-0.6b-v3", **kwargs)
-        elif model_type == "parakeet-1.1b":
-            logger.debug("Initializing ParakeetModel with nvidia/parakeet-tdt-1.1b")
-            return ParakeetModel(model_name="nvidia/parakeet-tdt-1.1b", **kwargs)
-        elif model_type == "canary":
-            logger.debug("Initializing CanaryModel")
-            return CanaryModel(**kwargs)
-        elif model_type == "whisper":
+        if "canary" in model_type:
+            logger.debug(f"Initializing CanaryModel with {model_type}")
+            return CanaryModel(model_name=model_type, **kwargs)
+        elif "parakeet" in model_type:
+            logger.debug(f"Initializing ParakeetModel with {model_type}")
+            return ParakeetModel(model_name=model_type, **kwargs)
+        elif "whisper" in model_type:
+            logger.debug(f"Initializing WhisperModel with {model_type}")
             # Check if Whisper dependencies are installed
             if importlib.util.find_spec("transformers") is None:
                 raise ImportError(
@@ -79,7 +79,7 @@ class ModelFactory:
             try:
                 from models.whisper import WhisperModel
                 logger.debug("Initializing WhisperModel")
-                return WhisperModel(**kwargs)
+                return WhisperModel(model_name=model_type, **kwargs)
             except ImportError as e:
                 raise ImportError(
                     "Failed to import Whisper model. Please install dependencies using:\n"
@@ -87,4 +87,4 @@ class ModelFactory:
                 ) from e
         else:
             logger.error(f"Unsupported model type: {model_type}")
-            raise ValueError(f"Unsupported model type: {model_type}") 
+            raise ValueError(f"Unsupported model type: {model_type}")

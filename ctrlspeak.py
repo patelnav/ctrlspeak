@@ -130,11 +130,9 @@ for lib in ['matplotlib', 'numba', 'urllib3', 'nemo', 'nemo_logger',
 
 # Define known model mappings (directory prefix -> CLI name)
 MODEL_CACHE_MAP = {
-    "models--nvidia--parakeet-tdt-0.6b-v3": "parakeet-0.6b",
-    "models--nvidia--parakeet-tdt-1.1b": "parakeet-1.1b",
-    "models--nvidia--canary-1b": "canary",
-    "models--openai--whisper-large-v3-turbo": "whisper",
-    # Add other models if supported in the future
+    "models--nvidia--parakeet-tdt-0.6b-v3": "nvidia/parakeet-tdt-0.6b-v3",
+    "models--nvidia--canary-1b": "nvidia/canary-1b",
+    "models--openai--whisper-large-v3-turbo": "openai/whisper-large-v3"
 }
 
 def save_environment_variables():
@@ -507,13 +505,14 @@ def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
     parser.add_argument("--model", type=str, 
-                        choices=["parakeet", "parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], # Allow generic parakeet here
                         default=get_preferred_model(),
                         help="Speech recognition model to use (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", 
                         help="Enable debug mode with verbose logging")
     parser.add_argument("--check-only", action="store_true", # <<< Add check-only flag
                         help="Check model cache and configuration, then exit.")
+    parser.add_argument("--list-models", action="store_true",
+                        help="List all supported models and exit.")
     return parser.parse_args()
 
 def find_cached_models(): # Takes no arguments
@@ -552,6 +551,13 @@ def main():
     try:
         # Parse command-line arguments
         args = parse_arguments()
+
+        if args.list_models:
+            console.print("\n[bold]Supported Models:[/bold]")
+            for alias, model_name in ModelFactory._DEFAULT_ALIASES.items():
+                console.print(f"  - [cyan]{alias}[/cyan]: {model_name}")
+            sys.exit(0)
+
         DEBUG_MODE = args.debug
         model_type_arg = args.model # Get the raw argument
 
@@ -573,13 +579,13 @@ def main():
         console.print("\n[bold]Model Configuration:[/bold]")
         # Display the original argument and the resolved type
         if model_type_arg.lower() != model_type.lower():
-             console.print(f"  Selected (alias): [cyan]{model_type_arg}[/cyan] -> Resolved: [cyan]{model_type}[/cyan]")
+             console.print(f"  Selected (alias): [cyan]{model_type_arg}[/cyan] -> Resolved: [cyan]{ModelFactory.resolve_model_alias(model_type)}[/cyan]")
         else:
-             console.print(f"  Selected: [cyan]{model_type}[/cyan]")
+             console.print(f"  Selected: [cyan]{ModelFactory.resolve_model_alias(model_type)}[/cyan]")
         
         if cached_models:
             # Check cache using the *resolved* global model_type
-            other_cached = sorted(list(cached_models - {model_type})) 
+            other_cached = sorted(list(cached_models - {ModelFactory.resolve_model_alias(model_type)})) 
             if model_type in cached_models:
                  console.print(f"  Status: [green]Found in cache[/green]")
             else:
@@ -621,16 +627,6 @@ def main():
         # Print startup info based on debug mode
         print_startup_info()
         
-        # Create a welcome banner (using selected type, actual details later)
-        # Remove commented out banner details
-        console.print(Panel.fit(
-            "[bold cyan]ctrlSPEAK[/bold cyan] - Ready to transcribe.",
-            title="Welcome",
-            # Use model_type here initially, actual name/id after loading
-            subtitle=f"Model: [bold]{model_type}[/bold] (Loading...)",
-            border_style="blue"
-        ))
-        
         # --- Initialize Keyboard Listener BEFORE Model Loading ---
         logger.info("Initializing keyboard listener BEFORE model...")
         keyboard_manager = KeyboardShortcutManager()
@@ -650,6 +646,14 @@ def main():
              console.print("[bold red]Failed to load STT model. Exiting.[/bold red]")
              return 1 # Exit if model loading failed
         logger.info("Model loaded successfully.")
+
+        # Create a welcome banner (using selected type, actual details later)
+        # Remove commented out banner details
+        console.print(Panel.fit(
+            "[bold cyan]ctrlspeak[/bold cyan] - Ready to transcribe.\nTriple-tap [bold]Ctrl[/bold] to start/stop recording.",
+            title="Welcome",
+            border_style="blue"
+        ))
 
         # Remove commented out banner update
         # # --- Update Welcome Banner AFTER Model Load ---

@@ -111,27 +111,52 @@ pip install -r requirements-whisper.txt
 ctrlSPEAK uses open-source speech recognition models:
 
 - **Parakeet 0.6B** (default): NVIDIA NeMo's `nvidia/parakeet-tdt-0.6b-v3` model. Good balance of speed, accuracy, punctuation, and capitalization.
-- **Parakeet 1.1B**: NVIDIA NeMo's older `nvidia/parakeet-tdt-1.1b` model. Potentially higher accuracy in some cases, but lacks punctuation.
 - **Canary**: NVIDIA NeMo's `nvidia/canary-1b` multilingual model (En, De, Fr, Es) with punctuation, but can be slower.
 - **Whisper** (optional): OpenAI's `openai/whisper-large-v3` model. A fast, accurate, and powerful model that includes excellent punctuation and capitalization.
   - To use Whisper, install additional dependencies: `uv pip install -r requirements-whisper.txt`
 
+**Note:** The `nvidia/parakeet-tdt-1.1b` model is also available for testing, but it is not recommended for general use as it lacks punctuation and is slower than the `0.6b` model.
+
 The models are automatically downloaded from HuggingFace the first time you use them.
+
+### Listing Supported Models
+
+To see a list of all supported models, use the `--list-models` flag:
+
+```bash
+ctrlspeak --list-models
+```
+
+This will output a list of the available model aliases and their corresponding Hugging Face model names.
 
 ### Model Selection
 
-You can specify which model to use with the `--model` flag:
+You can specify which model to use with the `--model` flag. You can use a short name or a full model URL from Hugging Face.
+
+**Short Names:**
+
+*   `parakeet`: NVIDIA's Parakeet TDT 0.6B model (v3).
+*   `canary`: NVIDIA's Canary 1B model.
+*   `whisper`: OpenAI's Whisper Large v3 model.
+
+**Full Model URL:**
+
+You can also provide a full model URL from Hugging Face. For example:
+
+```bash
+ctrlspeak --model nvidia/parakeet-tdt-1.1b
+```
+
+This will download and use the specified model.
 
 ```bash
 # Using Homebrew installation
-ctrlspeak --model parakeet-0.6b  # Default
-ctrlspeak --model parakeet-1.1b  # Older, larger Parakeet
+ctrlspeak --model parakeet  # Default
 ctrlspeak --model canary         # Multilingual with punctuation
 ctrlspeak --model whisper        # OpenAI's model
 
 # Using manual installation
-python ctrlspeak.py --model parakeet-0.6b
-python ctrlspeak.py --model parakeet-1.1b
+python ctrlspeak.py --model parakeet
 python ctrlspeak.py --model canary
 python ctrlspeak.py --model whisper
 ```
@@ -150,12 +175,11 @@ ctrlspeak --debug
 
 ## Performance Comparison
 
-| Model            | Load Time | Transcription Time | Transcription Quality         | Output Example (test.wav)                  |
-|------------------|-----------|-------------------|------------------------------|--------------------------------------------|
-| Parakeet 0.6B    | 5.17s     | 0.70s             | Good w/ Punct. & Caps.       | "Well, I don't wish to see it any more, observed Phebe, turning away her eyes. It is certainly very like the old portrait." |
-| Parakeet 1.1B    | 10.07s    | 1.08s             | Good, *no* punctuation       | "well i don't wish to see it any more observed phoebe turning away her eyes it is certainly very like the old portrait" |
-| Canary           | 8.15s     | 30.82s            | Good w/ Punct. & Caps.       | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
-| Whisper (large-v3) | 4.0s     | 4.5s             | Excellent w/ Punct. & Caps.  | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| Model | Load Time | Transcription Time | Transcription Quality | Output Example (test.wav) |
+|---|---|---|---|---|
+| Parakeet 0.6B (v3) | 12.15s | 1.36s | Good w/ Punct. & Caps. | "Well, I don't wish to see it any more, observed Phebe, turning away her eyes. It is certainly very like the old portrait." |
+| Canary | 7.85s | 3.95s | Good w/ Punct. & Caps. | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| Whisper (large-v3) | 3.77s | 6.01s | Excellent w/ Punct. & Caps. | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
 
 **Note:** Whisper model uses translate mode to enable proper punctuation and capitalization for English transcription.
 

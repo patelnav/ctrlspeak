@@ -43,11 +43,14 @@ def transcribe_audio(audio_file, model_type, verbose=False):
     # Enable MPS (Metal) acceleration if available
     device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
     logger.info(f"Using device: {device}")
+
+    # Resolve model alias
+    resolved_model_type = ModelFactory.resolve_model_alias(model_type)
     
     # Load model
-    logger.info(f"Loading {model_type} model...")
+    logger.info(f"Loading {resolved_model_type} model...")
     start_time = time.time()
-    model = ModelFactory.get_model(model_type=model_type, device=device, verbose=verbose)
+    model = ModelFactory.get_model(model_type=resolved_model_type, device=device, verbose=verbose)
     model.load_model()
     load_time = time.time() - start_time
     logger.info(f"Model loaded in {load_time:.2f} seconds")
@@ -57,7 +60,7 @@ def transcribe_audio(audio_file, model_type, verbose=False):
     start_time = time.time()
     
     # Transcribe using our simplified API
-    result = model.transcribe(audio_file)
+    result = model.transcribe_batch([audio_file])
     
     end_time = time.time()
     transcribe_time = end_time - start_time
@@ -66,8 +69,9 @@ def transcribe_audio(audio_file, model_type, verbose=False):
     logger.info(f"Transcription completed in {transcribe_time:.2f} seconds")
     
     if result:
+        transcription = result[0]
         logger.info("-" * 50)
-        logger.info(f"Transcription: {result}")
+        logger.info(f"Transcription: {transcription}")
         logger.info("-" * 50)
     else:
         logger.warning("No transcription result")
@@ -78,8 +82,7 @@ def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description="ctrlSPEAK Test - Test transcription on an audio file")
     parser.add_argument("audio_file", help="Path to the audio file to transcribe")
-    parser.add_argument("--model", choices=["parakeet-0.6b", "parakeet-1.1b", "canary", "whisper"], 
-                        default="parakeet-0.6b",
+    parser.add_argument("--model", default="parakeet-0.6b",
                         help="Model to use for transcription (default: %(default)s)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
