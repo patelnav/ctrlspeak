@@ -15,7 +15,6 @@ from rich.panel import Panel
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from cli import parse_args_only
-from models.factory import ModelFactory
 from utils.config import is_first_run, mark_first_run_complete, set_preferred_model
 
 import state
@@ -56,6 +55,7 @@ def find_cached_models():
 def run_app(args):
     """Main application entry point"""
     # Lazy imports to avoid heavy deps during --list-models
+    from models.factory import ModelFactory
     from utils.keyboard_shortcuts import KeyboardShortcutManager
     from utils.audio import AudioManager
     from model_loader import get_model
@@ -224,6 +224,7 @@ def main():
     args = parse_args_only()
 
     if args.list_models:
+        from models.factory import ModelFactory
         console = Console()
         console.print("\n[bold]Supported Models:[/bold]")
         for alias, model_name in ModelFactory._DEFAULT_ALIASES.items():

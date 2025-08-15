@@ -1,8 +1,6 @@
 """
 Factory for creating speech-to-text models.
 """
-from models.parakeet import ParakeetModel
-from models.canary import CanaryModel
 import logging
 import importlib.util
 import platform
@@ -81,9 +79,11 @@ class ModelFactory:
         kwargs['verbose'] = verbose
         
         if "canary" in model_type:
+            from models.canary import CanaryModel
             logger.debug(f"Initializing CanaryModel with {model_type}")
             return CanaryModel(model_name=model_type, **kwargs)
         elif "parakeet" in model_type:
+            from models.parakeet import ParakeetModel
             logger.debug(f"Initializing ParakeetModel with {model_type}")
             return ParakeetModel(model_name=model_type, **kwargs)
         elif "whisper" in model_type:

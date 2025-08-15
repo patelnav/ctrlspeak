@@ -2,11 +2,11 @@
 import argparse
 import sys
 from utils.config import get_preferred_model
-from models.factory import ModelFactory
 from __init__ import __version__
 
 def parse_args_only():
     """Parse command-line arguments without loading heavy libraries."""
+    from models.factory import ModelFactory
     parser = argparse.ArgumentParser(description="ctrlSPEAK - Speech-to-text transcription tool")
     parser.add_argument("--model", type=str, 
                         default=get_preferred_model(),
