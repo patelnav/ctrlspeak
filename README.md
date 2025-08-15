@@ -139,6 +139,7 @@ You can specify which model to use with the `--model` flag. You can use a short 
 *   `parakeet`: NVIDIA's Parakeet TDT 0.6B model (v3).
 *   `canary`: NVIDIA's Canary 1B Flash model.
 *   `canary-180m`: NVIDIA's Canary 180M Flash model.
+*   `canary-v2`: NVIDIA's Canary 1B v2 model.
 *   `whisper`: OpenAI's Whisper Large v3 model.
 
 **Full Model URL:**
@@ -156,12 +157,14 @@ This will download and use the specified model.
 ctrlspeak --model parakeet  # Default
 ctrlspeak --model canary         # Multilingual with punctuation
 ctrlspeak --model canary-180m    # The smaller Canary model
+ctrlspeak --model canary-v2
 ctrlspeak --model whisper        # OpenAI's model
 
 # Using manual installation
 python ctrlspeak.py --model parakeet
 python ctrlspeak.py --model canary
 python ctrlspeak.py --model canary-180m
+python ctrlspeak.py --model canary-v2
 python ctrlspeak.py --model whisper
 ```
 
@@ -177,7 +180,8 @@ ctrlspeak --debug
 2. **Parakeet 1.1B (NVIDIA)** - `nvidia/parakeet-tdt-1.1b`
 3. **Canary (NVIDIA)** - `nvidia/canary-1b-flash`
 4. **Canary (NVIDIA)** - `nvidia/canary-180m-flash`
-5. **Whisper (OpenAI)** - `openai/whisper-large-v3`
+5. **Canary (NVIDIA)** - `nvidia/canary-1b-v2`
+6. **Whisper (OpenAI)** - `openai/whisper-large-v3`
 
 ## Performance Comparison
 

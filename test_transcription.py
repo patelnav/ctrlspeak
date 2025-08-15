@@ -20,6 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ctrlspeak-test")
 
+
 def transcribe_audio(audio_file, model_type, verbose=False):
     """
     Transcribe an audio file using the specified model.

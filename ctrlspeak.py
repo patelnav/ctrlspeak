@@ -75,6 +75,8 @@ def run_app(args):
 
         state.DEBUG_MODE = args.debug
         model_type_arg = args.model
+        state.source_lang = args.source_lang
+        state.target_lang = args.target_lang
 
         state.model_type = ModelFactory.resolve_model_alias(model_type_arg)
 
@@ -139,7 +141,7 @@ def run_app(args):
 
         state.transcription_worker_thread = threading.Thread(
             target=transcription_worker,
-            args=(state.stt_model, state.transcription_queue, state.transcribed_chunks),
+            args=(state.stt_model, state.transcription_queue, state.transcribed_chunks, state.source_lang, state.target_lang),
             daemon=True,
             name="TranscriptionWorker",
         )

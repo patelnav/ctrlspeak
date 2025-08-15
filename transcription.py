@@ -10,7 +10,7 @@ from utils.audio import SAMPLE_RATE
 
 logger = logging.getLogger("ctrlspeak")
 
-def transcription_worker(model, work_queue, results_list):
+def transcription_worker(model, work_queue, results_list, source_lang, target_lang):
     """
     Pulls audio data from queue, transcribes using the real model (via temp file),
     adds text to results_list. Runs in a separate thread until None is received.
@@ -58,7 +58,7 @@ def transcription_worker(model, work_queue, results_list):
             logger.debug(f"Worker calling model.transcribe() for {temp_file_path}...")
             transcription_start_time = time.time()
             try:
-                 results = model.transcribe_batch([temp_file_path])
+                 results = model.transcribe_batch([temp_file_path], source_lang=source_lang, target_lang=target_lang)
                  if results and isinstance(results, list):
                       text = results[0]
                  else:

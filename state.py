@@ -14,7 +14,8 @@ MODEL_CACHE_MAP = {
     "models--nvidia--canary-1b": "nvidia/canary-1b",
     "models--nvidia--canary-1b-flash": "nvidia/canary-1b-flash",
     "models--nvidia--canary-180m-flash": "nvidia/canary-180m-flash",
-    "models--openai--whisper-large-v3": "openai/whisper-large-v3"
+    "models--openai--whisper-large-v3": "openai/whisper-large-v3",
+    "models--nvidia--canary-1b-v2": "nvidia/canary-1b-v2"
 }
 
 audio_manager = None

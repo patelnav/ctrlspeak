@@ -17,6 +17,7 @@ class ModelFactory:
         "parakeet": "nvidia/parakeet-tdt-0.6b-v3",
         "canary": "nvidia/canary-1b-flash",
         "canary-180m": "nvidia/canary-180m-flash",
+        "canary-v2": "nvidia/canary-1b-v2",
         "whisper": "openai/whisper-large-v3"
     }
 
