@@ -3,6 +3,7 @@ import argparse
 import sys
 from utils.config import get_preferred_model
 from models.factory import ModelFactory
+from __init__ import __version__
 
 def parse_args_only():
     """Parse command-line arguments without loading heavy libraries."""
@@ -16,6 +17,9 @@ def parse_args_only():
                         help="Check model cache and configuration, then exit.")
     parser.add_argument("--list-models", action="store_true",
                         help="List all supported models and exit.")
+    parser.add_argument("-v", "--version", action="version",
+                        version=f"%(prog)s {__version__}",
+                        help="Show program's version number and exit.")
     
     # Check if -h or --help is present
     if '-h' in sys.argv or '--help' in sys.argv:
