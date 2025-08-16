@@ -54,11 +54,12 @@ class ParakeetModel(BaseSTTModel):
             logger.error(f"Error loading model: {str(e)}")
             raise
     
-    def transcribe_batch(self, audio_paths: List[str]) -> List[str]:
+    def transcribe_batch(self, audio_paths: List[str], **kwargs) -> List[str]:
         """Transcribe multiple audio files in batch.
         
         Args:
             audio_paths: List of paths to audio files.
+            **kwargs: Additional arguments (ignored for compatibility).
             
         Returns:
             List of clean string transcriptions.
