@@ -13,7 +13,7 @@ logger = logging.getLogger("parakeet_mlx_model")
 class ParakeetMLXModel(BaseSTTModel):
     """Parakeet MLX model for speech-to-text on Apple Silicon."""
 
-    def __init__(self, model_name="mlx-community/parakeet-tdt-0.6b-v2", device=None, verbose=False):
+    def __init__(self, model_name="mlx-community/parakeet-tdt-0.6b-v3", device=None, verbose=False):
         """Initialize the Parakeet MLX model."""
         super().__init__(device=None, verbose=verbose)  # MLX handles device automatically
         self.model_name = model_name

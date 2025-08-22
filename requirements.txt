@@ -3,15 +3,15 @@ torch>=2.0.0
 torchaudio
 numpy<2.0.0
 
-# Speech recognition models
-nemo_toolkit[asr]>=1.23.0  # For Parakeet and Canary models
-
 # Audio processing
 sounddevice
 soundfile
-# audioop-lts  # For Python 3.13+ compatibility - commented out for now
 
 # UI and system integration
-pynput     # For keyboard shortcuts
-pyperclip  # For clipboard operations
-rich>=13.6.0  # For terminal UI
+pynput
+pyperclip
+rich>=13.6.0
+
+# MLX dependencies
+mlx
+parakeet-mlx

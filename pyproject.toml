@@ -28,19 +28,17 @@ dependencies = [
     "torch>=2.0.0",
     "torchaudio",
     "numpy<2.0.0",
-    "nemo_toolkit[asr]>=1.23.0",
+    
     "sounddevice",
     "soundfile",
     "pynput",
     "pyperclip",
     "rich>=13.6.0",
+    "mlx",
+    "parakeet-mlx",
 ]
 
-[project.optional-dependencies]
-whisper = [
-    "transformers>=4.43.0",
-    "accelerate>=0.30.0",
-]
+
 
 [project.urls]
 Homepage = "https://github.com/patelnav/ctrlspeak"

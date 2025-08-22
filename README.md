@@ -38,12 +38,12 @@
 # Install ctrlSPEAK using Homebrew
 brew tap patelnav/ctrlspeak
 brew install ctrlspeak
-```
 
-For faster package installation:
-```bash
-# Install with UV support for faster package installation
-brew install ctrlspeak --with-uv
+# To install with support for NVIDIA models
+brew install ctrlspeak --with-nvidia
+
+# To install with support for Whisper models
+brew install ctrlspeak --with-whisper
 ```
 
 #### Manual Installation
@@ -63,24 +63,15 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-Install dependencies (recommended with UV for faster installation):
+Install dependencies:
 ```bash
-# Install UV first if you don't have it
-pip install uv
-
-# Then install dependencies with UV
-uv pip install -r requirements.txt
-
-# Or use traditional pip (slower)
+# Install core dependencies
 pip install -r requirements.txt
-```
 
-For Whisper model support (optional):
-```bash
-# With UV (recommended)
-uv pip install -r requirements-whisper.txt
+# For NVIDIA model support (optional)
+pip install -r requirements-nvidia.txt
 
-# Or with traditional pip
+# For Whisper model support (optional)
 pip install -r requirements-whisper.txt
 ```
 
@@ -110,13 +101,12 @@ pip install -r requirements-whisper.txt
 
 ctrlSPEAK uses open-source speech recognition models:
 
-- **Parakeet 0.6B** (default): NVIDIA NeMo's `nvidia/parakeet-tdt-0.6b-v3` model. Good balance of speed, accuracy, punctuation, and capitalization.
-- **Canary**: NVIDIA NeMo's `nvidia/canary-1b-flash` multilingual model (En, De, Fr, Es) with punctuation, but can be slower.
-- **Canary (180M)**: NVIDIA NeMo's `nvidia/canary-180m-flash` multilingual model, smaller and less accurate.
-- **Whisper** (optional): OpenAI's `openai/whisper-large-v3` model. A fast, accurate, and powerful model that includes excellent punctuation and capitalization.
-  - To use Whisper, install additional dependencies: `uv pip install -r requirements-whisper.txt`
+- **Parakeet 0.6B (MLX)** (default): `mlx-community/parakeet-tdt-0.6b-v3` model optimized for Apple Silicon. Recommended for most users on M1/M2/M3 Macs.
+- **Canary**: NVIDIA NeMo's `nvidia/canary-1b-flash` multilingual model (En, De, Fr, Es) with punctuation, but can be slower. Requires `requirements-nvidia.txt`.
+- **Canary (180M)**: NVIDIA NeMo's `nvidia/canary-180m-flash` multilingual model, smaller and less accurate. Requires `requirements-nvidia.txt`.
+- **Whisper** (optional): OpenAI's `openai/whisper-large-v3` model. A fast, accurate, and powerful model that includes excellent punctuation and capitalization. Requires `requirements-whisper.txt`.
 
-**Note:** The `nvidia/parakeet-tdt-1.1b` model is also available for testing, but it is not recommended for general use as it lacks punctuation and is slower than the `0.6b` model.
+**Note:** The `nvidia/parakeet-tdt-1.1b` model is also available for testing, but it is not recommended for general use as it lacks punctuation and is slower than the `0.6b` model. Requires `requirements-nvidia.txt`.
 
 The models are automatically downloaded from HuggingFace the first time you use them.
 
@@ -132,19 +122,7 @@ This will output a list of the available model aliases and their corresponding H
 
 ### Apple Silicon (MLX) Acceleration
 
-For users on Apple Silicon (M1/M2/M3 Macs), an optimized version of the Parakeet model is available using Apple's MLX framework. This can provide a significant performance boost.
-
-To use the MLX-accelerated model:
-
-1.  **Install MLX dependencies:**
-    ```bash
-    uv pip install -r requirements-mlx.txt
-    ```
-
-2.  **Run with the MLX model:**
-    ```bash
-    ctrlspeak --model parakeet-mlx
-    ```
+For users on Apple Silicon (M1/M2/M3 Macs), an optimized version of the Parakeet model is available using Apple's MLX framework. This is the default model and provides a significant performance boost.
 
 ## Model Selection
 
@@ -152,10 +130,9 @@ You can select a model using the `--model` flag. You can use either the full mod
 
 **Short Names:**
 
-*   `parakeet`: NVIDIA's Parakeet TDT 0.6B model (v3).
+*   `parakeet`: Parakeet 0.6B optimized for Apple Silicon (MLX). (Default)
 *   `canary`: NVIDIA's Canary 1B Flash model.
 *   `canary-180m`: NVIDIA's Canary 180M Flash model.
-*   `parakeet-mlx`: Parakeet 0.6B optimized for Apple Silicon (MLX).
 *   `whisper`: OpenAI's Whisper v3 model.
 
 **Full Model URL:**
@@ -203,14 +180,15 @@ ctrlspeak --debug
 
 ## Performance Comparison
 
-| Model                                                    | Load Time (s) | Transcription Time (s) | Notes                                            |
-| -------------------------------------------------------- | ------------- | ---------------------- | ------------------------------------------------ |
-| **`nvidia/parakeet-tdt-0.6b-v3`** (NeMo/PyTorch)         | 14.83         | 1.44                   | Default model, good balance.                     |
-| **`mlx-community/parakeet-tdt-0.6b-v2`** (Apple Silicon) | **0.31**      | **1.14**               | **Recommended for Apple Silicon.** Much faster load. |
-| **`nvidia/canary-1b-flash`**                             | 8.09          | 3.30                   | Fast multilingual model.                         |
-| **`nvidia/canary-180m-flash`**                           | 2.33          | 3.35                   | Smaller, faster multilingual model.              |
-| **`nvidia/canary-1b-v2`**                                | 13.96         | 4.85                   | Newer multilingual model.                        |
-| **`openai/whisper-large-v3`**                            | 6.2           | 1.8                    | Very accurate, but slower transcription.         |
+| Model | Framework | Load Time (s) | Transcription Time (s) | Output Example (test.wav) |
+|---|---|---|---|---|
+| **`parakeet-tdt-0.6b-v3`** | MLX (Apple Silicon) | 0.97 | 0.53 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| | NeMo (NVIDIA) | 15.52 | 1.68 | |
+| **`parakeet-tdt-0.6b-v2`** | MLX (Apple Silicon) | 0.99 | 0.56 | "Well, I don't wish to see it any more, observed Phebe, turning away her eyes. It is certainly very like the old portrait." |
+| | NeMo (NVIDIA) | 8.23 | 1.61 | |
+| **`canary-1b-flash`** | NeMo (NVIDIA) | 32.06 | 3.20 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| **`canary-180m-flash`** | NeMo (NVIDIA) | 6.16 | 3.20 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| **`whisper-large-v3`** | Transformers (OpenAI) | 5.44 | 2.53 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
 
 *Testing performed on a MacBook Pro (M2 Max) with a 7-second audio file (`test.wav`). Your results may vary.*
 

@@ -1,3 +1,0 @@
-# Optional dependencies for MLX on Apple Silicon
-mlx
-parakeet-mlx
