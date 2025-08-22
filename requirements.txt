@@ -12,6 +12,3 @@ pynput
 pyperclip
 rich>=13.6.0
 
-# MLX dependencies
-mlx
-parakeet-mlx
