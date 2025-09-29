@@ -78,10 +78,29 @@ class ModelFactory:
         kwargs['verbose'] = verbose
         
         if "canary" in model_type:
+            # Check if nemo is available for Canary models
+            try:
+                import nemo.collections.asr as nemo_asr
+            except ImportError:
+                raise ImportError(
+                    "Canary models require nemo-toolkit. Please install with:\n"
+                    "brew reinstall ctrlspeak --with-nvidia"
+                )
+            
             from models.canary import CanaryModel
             logger.debug(f"Initializing CanaryModel with {model_type}")
             return CanaryModel(model_name=model_type, **kwargs)
         elif "parakeet" in model_type:
+            # Check if this is an NVIDIA Parakeet model that needs nemo
+            if "nvidia" in model_type:
+                try:
+                    import nemo.collections.asr as nemo_asr
+                except ImportError:
+                    raise ImportError(
+                        "NVIDIA Parakeet models require nemo-toolkit. Please install with:\n"
+                        "brew reinstall ctrlspeak --with-nvidia"
+                    )
+            
             from models.parakeet import ParakeetModel
             logger.debug(f"Initializing ParakeetModel with {model_type}")
             return ParakeetModel(model_name=model_type, **kwargs)
@@ -90,8 +109,8 @@ class ModelFactory:
             # Check if Whisper dependencies are installed
             if importlib.util.find_spec("transformers") is None:
                 raise ImportError(
-                    "Whisper dependencies not found. Please install them using:\n"
-                    "pip install -r requirements-whisper.txt"
+                    "Whisper models require transformers. Please install with:\n"
+                    "brew reinstall ctrlspeak --with-whisper"
                 )
             
             # Dynamically import WhisperModel
@@ -101,8 +120,8 @@ class ModelFactory:
                 return WhisperModel(model_name=model_type, **kwargs)
             except ImportError as e:
                 raise ImportError(
-                    "Failed to import Whisper model. Please install dependencies using:\n"
-                    "pip install -r requirements-whisper.txt"
+                    "Failed to import Whisper model. Please install with:\n"
+                    "brew reinstall ctrlspeak --with-whisper"
                 ) from e
         else:
             logger.error(f"Unsupported model type: {model_type}")

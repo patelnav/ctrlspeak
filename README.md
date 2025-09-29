@@ -35,15 +35,25 @@
 #### Using Homebrew (Recommended)
 
 ```bash
-# Install ctrlSPEAK using Homebrew
+# Basic installation (MLX models only)
 brew tap patelnav/ctrlspeak
 brew install ctrlspeak
 
-# To install with support for NVIDIA models
-brew install ctrlspeak --with-nvidia
+# Recommended: Full installation with all model support
+brew install ctrlspeak --with-nvidia --with-whisper
 
-# To install with support for Whisper models
-brew install ctrlspeak --with-whisper
+# Check what models are available after installation
+ctrlspeak --list-models
+```
+
+**What each option does:**
+- `--with-nvidia`: Enables NVIDIA Parakeet and Canary models (recommended for best performance)
+- `--with-whisper`: Enables OpenAI Whisper models (optional)
+
+**If you get "No module named 'nemo'" errors:**
+```bash
+# Reinstall with NVIDIA support
+brew reinstall ctrlspeak --with-nvidia
 ```
 
 #### Manual Installation

@@ -2,4 +2,4 @@
 ctrlSPEAK - A minimal speech-to-text utility for macOS.
 """
 
-__version__ = "1.3.6"
+__version__ = "1.4.0"

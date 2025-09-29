@@ -227,11 +227,67 @@ def main():
         from models.factory import ModelFactory
         console = Console()
         console.print("\n[bold]Supported Models:[/bold]")
+        
+        # Check what dependencies are available
+        nemo_available = False
+        whisper_available = False
+        mlx_available = False
+        
+        try:
+            import nemo.collections.asr as nemo_asr
+            nemo_available = True
+        except ImportError:
+            pass
+            
+        try:
+            import transformers
+            whisper_available = True
+        except ImportError:
+            pass
+            
+        try:
+            import mlx
+            mlx_available = True
+        except ImportError:
+            pass
+        
         for alias, model_name in ModelFactory._DEFAULT_ALIASES.items():
+            status = ""
             note = ""
+            
             if "mlx" in alias:
-                note = " (Apple Silicon / MLX)"
-            console.print(f"  - [cyan]{alias}[/cyan]: {model_name}{note}")
+                if mlx_available:
+                    status = " [green]✓ Available[/green]"
+                    note = " (Apple Silicon / MLX)"
+                else:
+                    status = " [red]✗ Requires MLX[/red]"
+                    note = " (Apple Silicon / MLX - install with: brew install mlx)"
+            elif "nvidia" in model_name or "canary" in alias:
+                if nemo_available:
+                    status = " [green]✓ Available[/green]"
+                else:
+                    status = " [red]✗ Requires NVIDIA support[/red]"
+                    note = " (install with: brew reinstall ctrlspeak --with-nvidia)"
+            elif "whisper" in alias:
+                if whisper_available:
+                    status = " [green]✓ Available[/green]"
+                else:
+                    status = " [red]✗ Requires Whisper support[/red]"
+                    note = " (install with: brew reinstall ctrlspeak --with-whisper)"
+            else:
+                status = " [green]✓ Available[/green]"
+                
+            console.print(f"  - [cyan]{alias}[/cyan]: {model_name}{note}{status}")
+        
+        # Show installation recommendations
+        if not nemo_available:
+            console.print(f"\n[yellow]💡 Tip:[/yellow] Install NVIDIA model support with:")
+            console.print(f"  [cyan]brew reinstall ctrlspeak --with-nvidia[/cyan]")
+        
+        if not whisper_available:
+            console.print(f"\n[yellow]💡 Tip:[/yellow] Install Whisper model support with:")
+            console.print(f"  [cyan]brew reinstall ctrlspeak --with-whisper[/cyan]")
+            
         sys.exit(0)
 
     run_app(args)
