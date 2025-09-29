@@ -11,3 +11,6 @@ temp_recording.wav
 
 # Distribution files
 *.tar.gz
+
+# Homebrew formula (kept locally but not tracked)
+homebrew-ctrlspeak/
