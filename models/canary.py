@@ -133,7 +133,8 @@ class CanaryModel(BaseSTTModel):
             
             with torch.amp.autocast(self.device.type, dtype=self.amp_dtype, enabled=self.use_amp):
                 with torch.no_grad():
-                    raw_result = self.model.transcribe(audio_paths)
+                    # Pass verbose=False to disable tqdm progress bar which causes multiprocessing issues
+                    raw_result = self.model.transcribe(audio_paths, verbose=False)
             
             transcribe_time = time.time() - transcribe_start
             logger.debug(f"Transcription completed in {transcribe_time:.2f} seconds")

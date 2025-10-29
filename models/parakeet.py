@@ -86,7 +86,8 @@ class ParakeetModel(BaseSTTModel):
             transcribe_start = time.time()
             
             # Let NeMo handle the transcription
-            raw_transcriptions = self.model.transcribe(audio_paths)
+            # Pass verbose=False to disable tqdm progress bar which causes multiprocessing issues
+            raw_transcriptions = self.model.transcribe(audio_paths, verbose=False)
             
             # NeMo 2.2.0+ returns Hypothesis objects, so we need special handling
             # Check if we're dealing with Hypothesis objects
