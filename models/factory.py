@@ -14,7 +14,11 @@ class ModelFactory:
     
     # Mapping from user-friendly aliases to specific model identifiers
     _DEFAULT_ALIASES = {
-        "parakeet": "mlx-community/parakeet-tdt-0.6b-v3",
+        "parakeet-v3-mlx": "mlx-community/parakeet-tdt-0.6b-v3",
+        "parakeet-v3": "nvidia/parakeet-tdt-0.6b-v3",
+        "parakeet-v2-mlx": "mlx-community/parakeet-tdt-0.6b-v2",
+        "parakeet-v2": "nvidia/parakeet-tdt-0.6b-v2",
+        "parakeet": "mlx-community/parakeet-tdt-0.6b-v3",  # Default to v3 MLX
         "canary": "nvidia/canary-1b-flash",
         "canary-180m": "nvidia/canary-180m-flash",
         "canary-v2": "nvidia/canary-1b-v2",

@@ -9,12 +9,24 @@ logger = logging.getLogger("ctrlspeak")
 def on_activate():
     """Handle global hotkey activation"""
     if not state.audio_manager.is_collecting:
+        # Check if model is being swapped
+        if hasattr(state, 'app_state_ref') and state.app_state_ref:
+            if state.app_state_ref.is_loading_model:
+                logger.warning("Cannot record while model is loading")
+                state.console.print("[yellow]Please wait for model to finish loading...[/yellow]")
+                return
+
         if not state.model_loaded:
             state.console.print("[bold yellow]Model is still loading. Please wait...[/bold yellow]")
             return
-            
+
         state.transcribed_chunks.clear()
         logger.info("Cleared previous transcribed chunks.")
+
+        # Reset accumulated text for UI
+        if hasattr(state, 'app_state_ref') and state.app_state_ref:
+            state.app_state_ref.accumulated_text = ""
+            logger.debug("Reset accumulated text for new recording.")
 
         logger.debug("Playing start beep...")
         play_start_beep()

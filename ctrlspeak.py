@@ -53,15 +53,16 @@ def find_cached_models():
 
 
 def run_app(args):
-    """Main application entry point"""
-    # Lazy imports to avoid heavy deps during --list-models
+    """Run application with Textual UI"""
+    import threading
+    import torch
     from models.factory import ModelFactory
     from utils.keyboard_shortcuts import KeyboardShortcutManager
     from utils.audio import AudioManager
     from model_loader import get_model
     from transcription import transcription_worker
     from hotkeys import on_activate
-    import torch
+    from ui import CtrlSpeakApp, AppState
 
     state.startup_time = time.time()
     setup_logging()
@@ -116,8 +117,15 @@ def run_app(args):
 
         set_preferred_model(state.model_type)
 
+        # Create app state for Textual UI
+        app_state = AppState()
+        app_state.selected_model = model_type_arg  # Store the alias, not the full name
+        state.app_state_ref = app_state  # Store reference for hotkeys to access
+
         state.audio_manager = AudioManager(
-            transcription_queue=state.transcription_queue, debug_mode=state.DEBUG_MODE
+            transcription_queue=state.transcription_queue,
+            debug_mode=state.DEBUG_MODE,
+            app_state=app_state
         )
 
         state.keyboard_manager = KeyboardShortcutManager()
@@ -130,6 +138,9 @@ def run_app(args):
         if not state.stt_model:
             console.print("[bold red]Failed to load STT model. Exiting.[/bold red]")
             return 1
+
+        # Sync loaded model state after successful load
+        app_state.loaded_model = model_type_arg  # Store the alias that was actually loaded
 
         console.print(
             Panel.fit(
@@ -149,11 +160,29 @@ def run_app(args):
 
         state.keyboard_manager.start_listening()
 
+        # Start audio stream
         with state.audio_manager.start_input_stream():
-            logger.info("Application ready. Waiting for keyboard events (or Ctrl+C)...")
+            logger.info("Starting Textual UI...")
 
-            while state.main_loop_active:
-                time.sleep(0.5)
+            # Sync loaded device state after stream starts
+            # If input_device is None, resolve to actual default device ID
+            if state.audio_manager.input_device is None:
+                import sounddevice as sd
+                app_state.loaded_device = sd.default.device[0] if sd.default.device else None
+            else:
+                app_state.loaded_device = state.audio_manager.input_device
+
+            # Create and run Textual app
+            app = CtrlSpeakApp(
+                app_state=app_state,
+                audio_manager=state.audio_manager,
+                model_type=model_type_arg  # Pass the alias, not the resolved full name
+            )
+
+            # Run the app (this blocks until app exits)
+            app.run()
+
+            logger.info("Textual UI exited, cleaning up...")
 
     except KeyboardInterrupt:
         console.print("\n[bold yellow]Ctrl+C detected. Shutting down...[/bold yellow]")
@@ -223,6 +252,11 @@ def main():
     """Main application entry point"""
     args = parse_args_only()
 
+    if args.check_compatibility:
+        from models.compatibility import CompatibilityChecker
+        CompatibilityChecker.print_report()
+        sys.exit(0)
+
     if args.list_models:
         from models.factory import ModelFactory
         console = Console()
@@ -290,6 +324,7 @@ def main():
             
         sys.exit(0)
 
+    # Run the Textual UI application
     run_app(args)
 
 

@@ -29,10 +29,12 @@ def parse_args_only():
     parser.add_argument("--file", type=str,
                         default=None,
                         help="Path to an audio file to transcribe (for testing).")
-    
+    parser.add_argument("--check-compatibility", action="store_true",
+                        help="Check compatibility of installed models and exit.")
+
     # Check if -h or --help is present
     if '-h' in sys.argv or '--help' in sys.argv:
         parser.print_help()
         sys.exit(0)
-        
+
     return parser.parse_args()

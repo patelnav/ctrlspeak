@@ -2,6 +2,13 @@
 __pycache__/
 *.pyc
 .venv/
+*.egg-info/
+dist/
+build/
+
+# Logging
+*.log
+*.err
 
 # Audio recording
 temp_recording.wav
