@@ -14,7 +14,7 @@ logger = logging.getLogger("canary_model")
 
 class CanaryModel(BaseSTTModel):
     """Canary model for multilingual speech-to-text and translation.
-    Defaults to 'nvidia/canary-1b-flash' if no model_name is specified."""
+    Defaults to nvidia/canary-1b-flash if no model_name is specified."""
 
     def __init__(self, model_name="nvidia/canary-1b-flash", device=None, verbose=False):
         """Initialize the Canary model.

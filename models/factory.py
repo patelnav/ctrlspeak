@@ -9,20 +9,32 @@ import sys
 # Configure logging
 logger = logging.getLogger("model_factory")
 
+# Import model identifiers from state.py
+from state import (
+    MLX_PARAKEET_V3,
+    MLX_PARAKEET_V2,
+    NVIDIA_PARAKEET_V3,
+    NVIDIA_PARAKEET_V2,
+    NVIDIA_CANARY_1B_FLASH,
+    NVIDIA_CANARY_180M,
+    NVIDIA_CANARY_V2,
+    OPENAI_WHISPER_V3,
+)
+
 class ModelFactory:
     """Factory for creating speech-to-text models."""
-    
+
     # Mapping from user-friendly aliases to specific model identifiers
     _DEFAULT_ALIASES = {
-        "parakeet-v3-mlx": "mlx-community/parakeet-tdt-0.6b-v3",
-        "parakeet-v3": "nvidia/parakeet-tdt-0.6b-v3",
-        "parakeet-v2-mlx": "mlx-community/parakeet-tdt-0.6b-v2",
-        "parakeet-v2": "nvidia/parakeet-tdt-0.6b-v2",
-        "parakeet": "mlx-community/parakeet-tdt-0.6b-v3",  # Default to v3 MLX
-        "canary": "nvidia/canary-1b-flash",
-        "canary-180m": "nvidia/canary-180m-flash",
-        "canary-v2": "nvidia/canary-1b-v2",
-        "whisper": "openai/whisper-large-v3"
+        "parakeet-v3-mlx": MLX_PARAKEET_V3,
+        "parakeet-v3": NVIDIA_PARAKEET_V3,
+        "parakeet-v2-mlx": MLX_PARAKEET_V2,
+        "parakeet-v2": NVIDIA_PARAKEET_V2,
+        "parakeet": MLX_PARAKEET_V3,  # Default to v3 MLX
+        "canary": NVIDIA_CANARY_1B_FLASH,
+        "canary-180m": NVIDIA_CANARY_180M,
+        "canary-v2": NVIDIA_CANARY_V2,
+        "whisper": OPENAI_WHISPER_V3
     }
 
     @classmethod

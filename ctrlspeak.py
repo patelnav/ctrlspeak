@@ -18,7 +18,7 @@ from cli import parse_args_only
 from utils.config import is_first_run, mark_first_run_complete, set_preferred_model
 
 import state
-from state import console, MODEL_CACHE_MAP
+from state import console, KNOWN_MODELS
 from logging_config import setup_logging, setup_logging_for_mode
 from environment import save_environment_variables, restore_environment_variables
 from permissions import check_permissions
@@ -30,19 +30,16 @@ def find_cached_models():
     """Scans the Hugging Face cache directory for known ctrlspeak models."""
     cached = set()
     try:
-        from huggingface_hub import constants as hf_constants
-        from pathlib import Path
-        cache_dir = Path(hf_constants.HF_HUB_CACHE)
-        logger.info(f"Checking Hugging Face cache at: {cache_dir}")
+        from huggingface_hub import scan_cache_dir
 
-        if not cache_dir.is_dir():
-            logger.warning(f"Hugging Face cache directory not found: {cache_dir}")
-            return cached
+        cache_info = scan_cache_dir()
+        logger.info(f"Scanning Hugging Face cache ({cache_info.size_on_disk_str} total)")
 
-        for item in cache_dir.iterdir():
-            if item.is_dir() and item.name in MODEL_CACHE_MAP:
-                cached.add(MODEL_CACHE_MAP[item.name])
-                logger.debug(f"Found cached model directory: {item.name} -> {MODEL_CACHE_MAP[item.name]}")
+        for repo in cache_info.repos:
+            # Only check models (not datasets/spaces) that are in our known set
+            if repo.repo_type == "model" and repo.repo_id in KNOWN_MODELS:
+                cached.add(repo.repo_id)
+                logger.debug(f"Found cached model: {repo.repo_id}")
 
     except Exception as e:
         logger.error(f"Error scanning Hugging Face cache: {e}", exc_info=state.DEBUG_MODE)

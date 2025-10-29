@@ -4,6 +4,9 @@ Configuration management for ctrlSPEAK.
 import os
 import json
 import time
+import logging
+
+logger = logging.getLogger("ctrlspeak.config")
 
 def get_config_path():
     """Get the path to the configuration file."""
@@ -51,9 +54,25 @@ def mark_first_run_complete():
     save_config(config)
 
 def get_preferred_model():
-    """Get the preferred model from config."""
+    """Get the preferred model from config, with migration for deprecated models."""
     config = load_config()
-    return config.get("preferred_model", "parakeet")
+    preferred = config.get("preferred_model", "parakeet")
+
+    # Migration map for deprecated models
+    DEPRECATED_MODELS = {
+        "nvidia/parakeet-tdt-1.1b": "parakeet",  # Migrate to default parakeet
+    }
+
+    # Check if the preferred model is deprecated
+    if preferred in DEPRECATED_MODELS:
+        new_model = DEPRECATED_MODELS[preferred]
+        logger.warning(f"Migrating deprecated model '{preferred}' to '{new_model}'")
+        # Update config with new model
+        config["preferred_model"] = new_model
+        save_config(config)
+        return new_model
+
+    return preferred
 
 def set_preferred_model(model_name):
     """Set the preferred model in config."""
