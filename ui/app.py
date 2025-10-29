@@ -274,13 +274,16 @@ class CtrlSpeakApp(App):
             await asyncio.sleep(0.1)
 
             # Load in background thread to avoid blocking UI
+            error_message = None
             def load_model_thread():
+                nonlocal error_message
                 try:
                     logger.info(f"Loading model in background thread: {full_model_name}")
                     new_model = get_model()  # Uses state.model_type
                     return new_model
                 except Exception as e:
                     logger.error(f"Error loading model in thread: {e}", exc_info=True)
+                    error_message = str(e)
                     return None
 
             # Run in executor
@@ -288,10 +291,12 @@ class CtrlSpeakApp(App):
             new_model = await loop.run_in_executor(None, load_model_thread)
 
             if not new_model:
-                loading_screen.update_status("Failed to load model!", error=True)
-                self.app_state.model_load_progress = "Failed to load model!"
-                await asyncio.sleep(2)
-                self.notify("Model loading failed", severity="error")
+                # Show the actual error message to the user
+                error_display = error_message or "Unknown error"
+                loading_screen.update_status(f"Failed: {error_display}", error=True)
+                self.app_state.model_load_progress = f"Failed: {error_display}"
+                await asyncio.sleep(3)  # Give more time to read error
+                self.notify(f"Model loading failed: {error_display}", severity="error")
 
                 # Restore old model type
                 state.model_type = old_model_type

@@ -131,9 +131,10 @@ def run_app(args):
 
         restore_environment_variables(saved_env_vars)
 
-        state.stt_model = get_model()
-        if not state.stt_model:
-            console.print("[bold red]Failed to load STT model. Exiting.[/bold red]")
+        try:
+            state.stt_model = get_model()
+        except Exception as e:
+            console.print(f"[bold red]Failed to load STT model: {e}[/bold red]")
             return 1
 
         # Sync loaded model state after successful load
