@@ -139,7 +139,15 @@ class CanaryModel(BaseSTTModel):
             logger.debug(f"Transcription completed in {transcribe_time:.2f} seconds")
             
             # Clean up each result
-            transcriptions = [self._clean_text(h.text) for h in raw_result]
+            # Handle both old API (Hypothesis objects with .text) and new API (strings)
+            transcriptions = []
+            for h in raw_result:
+                if isinstance(h, str):
+                    # NeMo 2.x+ or 1.25+ returns strings directly
+                    transcriptions.append(self._clean_text(h))
+                else:
+                    # NeMo 1.23-1.24 returns Hypothesis objects with .text attribute
+                    transcriptions.append(self._clean_text(h.text))
             
             end_time = time.time()
             logger.info(f"Transcription completed in {end_time - start_time:.2f} seconds")

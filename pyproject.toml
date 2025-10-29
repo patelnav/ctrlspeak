@@ -11,7 +11,7 @@ authors = [
     {name = "Nav Patel", email = "nav@abhi.in"},
 ]
 license = {text = "MIT"}
-requires-python = "~=3.10"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
@@ -27,7 +27,7 @@ keywords = ["speech-to-text", "voice-recognition", "macos", "accessibility"]
 dependencies = [
     "torch>=2.0.0",
     "torchaudio",
-    "numpy<2.0.0",
+    "numpy",
 
     "sounddevice",
     "soundfile",
@@ -35,8 +35,19 @@ dependencies = [
     "pyperclip",
     "rich>=13.6.0",
     "textual>=0.41.0",
+]
+
+[project.optional-dependencies]
+mlx = [
     "mlx",
     "parakeet-mlx",
+]
+nvidia = [
+    "nemo_toolkit[asr]>=1.23.0",
+]
+whisper = [
+    "transformers>=4.43.0",
+    "accelerate>=0.30.0",
 ]
 
 
@@ -51,6 +62,4 @@ ctrlspeak = "ctrlspeak:main"
 
 [tool.setuptools]
 packages = ["models", "utils", "ui", "ui.screens", "ui.widgets"]
-
-[tool.setuptools.package-data]
-"" = ["on.wav", "off.wav"] 
+include-package-data = true 

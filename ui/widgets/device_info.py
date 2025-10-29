@@ -42,17 +42,18 @@ class DeviceInfoWidget(Static):
             Tuple of (device_id, device_name, channels, sample_rate)
         """
         try:
-            # Get default input device
-            device_info = sd.query_devices(kind='input')
-            device_id = sd.default.device[0] if sd.default.device else None
+            # Use selected device from app_state if available, otherwise use system default
+            device_id = self.app_state.selected_device if self.app_state.selected_device is not None else (sd.default.device[0] if sd.default.device else None)
 
-            if device_info:
-                return (
-                    device_id,
-                    device_info['name'],
-                    device_info['max_input_channels'],
-                    int(device_info['default_samplerate'])
-                )
+            if device_id is not None:
+                device_info = sd.query_devices(device_id)
+                if device_info:
+                    return (
+                        device_id,
+                        device_info['name'],
+                        device_info['max_input_channels'],
+                        int(device_info['default_samplerate'])
+                    )
         except Exception as e:
             logger.error(f"Error getting device info: {e}")
 

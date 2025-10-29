@@ -45,6 +45,9 @@ class AudioManager:
         # Optional app_state for Textual UI integration
         self.app_state = app_state
 
+        # Audio device selection
+        self.input_device = None  # None means use default device
+
         # Phase 2: Add state for RMS detection
         self.RMS_THRESHOLD = 0.01 # EXAMPLE VALUE - NEEDS TUNING LATER!
         # Phase 5 Tuning: Reduce silence duration based on user feedback
@@ -57,7 +60,12 @@ class AudioManager:
     def set_debug_mode(self, debug_mode):
         """Set debug mode"""
         self.debug_mode = debug_mode
-    
+
+    def set_input_device(self, device_id):
+        """Set the audio input device by ID."""
+        self.input_device = device_id
+        logger.info(f"Audio input device set to: {device_id}")
+
     def set_is_collecting(self, value):
         """Set the is_collecting flag"""
         self.is_collecting = value
@@ -262,7 +270,10 @@ class AudioManager:
         """Start the audio input stream using the instance method as callback"""
         logger.info("AudioManager: Starting audio input stream...")
         # Use self.audio_callback directly
-        return sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, callback=self.audio_callback)
+        device = self.input_device if self.input_device is not None else None
+        if device is not None:
+            logger.info(f"Using audio device: {device}")
+        return sd.InputStream(device=device, samplerate=SAMPLE_RATE, channels=CHANNELS, callback=self.audio_callback)
 
 # Remove standalone functions if they are no longer used elsewhere
 # def audio_callback(indata, frames, time, status, audio_queue): ...

@@ -381,6 +381,11 @@ def main():
     """Main application entry point"""
     args = parse_args_only()
 
+    if args.check_compatibility:
+        from models.compatibility import CompatibilityChecker
+        CompatibilityChecker.print_report()
+        sys.exit(0)
+
     if args.list_models:
         from models.factory import ModelFactory
         console = Console()

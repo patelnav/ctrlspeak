@@ -5,14 +5,31 @@ Device selection screen for ctrlSPEAK.
 import logging
 import sounddevice as sd
 from textual.screen import Screen
-from textual.containers import Container, Vertical, ScrollableContainer
+from textual.containers import Container, Vertical
 from textual.widgets import Static, Label, ListItem, ListView
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual import on
 
 from ..state import AppState, DeviceInfo
 
 logger = logging.getLogger("ctrlspeak.ui.device_selection")
+
+
+class DeviceListItem(ListItem):
+    """Custom list item for audio devices."""
+
+    def __init__(self, device: DeviceInfo, **kwargs):
+        """Initialize with device info."""
+        self.device = device
+        device_text = f"{device.name} (Device #{device.id})"
+        device_specs = f"{device.channels}ch @ {device.sample_rate/1000:.1f}kHz"
+
+        if device.is_default:
+            device_text += " [DEFAULT]"
+
+        label_text = f"{device_text} - {device_specs}"
+        super().__init__(Label(label_text), id=f"device-{device.id}", **kwargs)
 
 
 class DeviceSelectionScreen(Screen):
@@ -20,6 +37,18 @@ class DeviceSelectionScreen(Screen):
     Device selection screen for choosing audio input device.
 
     Shows list of available devices with their capabilities.
+    """
+
+    CSS = """
+    ListView {
+        height: 1fr;
+        border: solid $primary;
+    }
+
+    ListItem:focus {
+        background: $accent;
+        color: $text;
+    }
     """
 
     BINDINGS = [
@@ -43,23 +72,25 @@ class DeviceSelectionScreen(Screen):
     def compose(self) -> ComposeResult:
         """Create child widgets."""
         with Container():
-            yield Label("Audio Input Devices", classes="screen-title")
+            yield Label("🎤 Audio Input Devices", classes="screen-title")
             yield Label("Select an audio input device:", classes="help-text")
 
             # Get available devices
             self.devices = self.get_available_devices()
 
-            with ScrollableContainer():
-                for device in self.devices:
-                    device_text = f"{device.name} (Device #{device.id})"
-                    device_specs = f"{device.channels}ch @ {device.sample_rate/1000:.1f}kHz"
+            if not self.devices:
+                yield Label("[red]No audio input devices found![/red]", classes="help-text")
+                yield Label("Press Esc to go back", classes="help-text")
+                return
 
-                    if device.is_default:
-                        device_text += " [DEFAULT]"
+            # Create interactive list view
+            device_list = ListView(
+                *[DeviceListItem(device) for device in self.devices],
+                id="device-list"
+            )
+            yield device_list
 
-                    yield Label(f"{device_text} - {device_specs}")
-
-            yield Label("\nUse ↑↓ to navigate, Enter to select, Esc to go back", classes="help-text")
+            yield Label("↑↓ Navigate • Enter to Select • Esc to Go Back", classes="help-text")
 
     def get_available_devices(self) -> list[DeviceInfo]:
         """
@@ -93,6 +124,36 @@ class DeviceSelectionScreen(Screen):
 
     def action_dismiss(self) -> None:
         """Dismiss the screen and go back."""
+        self.dismiss()
+
+    @on(ListView.Selected)
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Handle device selection from ListView."""
+        device_list: ListView = event.control
+
+        # Get the index of the selected item
+        selected_index = device_list.index
+
+        # Check if index is valid (0 is a valid index!)
+        if selected_index is None or selected_index < 0 or selected_index >= len(self.devices):
+            logger.warning(f"Invalid device index: {selected_index}")
+            return
+
+        selected_device = self.devices[selected_index]
+        logger.info(f"Selected device: {selected_device.name} (ID: {selected_device.id})")
+
+        # Update app state
+        self.app_state.selected_device = selected_device.id
+
+        # Update audio manager if available
+        if self.audio_manager:
+            try:
+                self.audio_manager.set_input_device(selected_device.id)
+                logger.info(f"Audio device set to ID {selected_device.id}")
+            except Exception as e:
+                logger.error(f"Error setting input device: {e}")
+
+        # Dismiss the screen
         self.dismiss()
 
     def on_mount(self) -> None:

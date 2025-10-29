@@ -33,10 +33,12 @@ def parse_args_only():
                         default="textual",
                         choices=["rich", "textual"],
                         help="UI mode to use: rich (legacy) or textual (default: %(default)s)")
+    parser.add_argument("--check-compatibility", action="store_true",
+                        help="Check compatibility of installed models and exit.")
 
     # Check if -h or --help is present
     if '-h' in sys.argv or '--help' in sys.argv:
         parser.print_help()
         sys.exit(0)
-        
+
     return parser.parse_args()

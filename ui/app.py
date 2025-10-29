@@ -62,7 +62,7 @@ class CtrlSpeakApp(App):
     }
 
     .waveform {
-        height: 5;
+        height: 7;
         border: solid $primary;
         padding: 1;
     }

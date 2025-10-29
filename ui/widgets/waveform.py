@@ -3,6 +3,7 @@ Waveform display widget for ctrlSPEAK.
 """
 
 import logging
+import sounddevice as sd
 from textual.widgets import Static
 from textual.app import ComposeResult
 from rich.text import Text
@@ -34,6 +35,27 @@ class WaveformDisplay(Static):
         self.app_state = app_state
         self.bar_width = 50  # Width of the bar graph
 
+    def _get_device_name(self) -> str:
+        """Get the name of the currently selected device."""
+        try:
+            device_id = self.app_state.selected_device
+            if device_id is not None:
+                device_info = sd.query_devices(device_id)
+                return device_info['name']
+        except Exception as e:
+            logger.debug(f"Error getting device name: {e}")
+
+        # Fallback to default device
+        try:
+            default_device = sd.default.device[0]
+            if default_device is not None:
+                device_info = sd.query_devices(default_device)
+                return device_info['name']
+        except Exception as e:
+            logger.debug(f"Error getting default device: {e}")
+
+        return "Unknown Device"
+
     def render(self) -> Text:
         """Render the waveform display."""
         rms = self.app_state.current_rms
@@ -42,6 +64,12 @@ class WaveformDisplay(Static):
 
         # Create the display text
         text = Text()
+
+        # Show selected device
+        device_name = self._get_device_name()
+        text.append("🎤 Device: ", style="dim cyan")
+        text.append(device_name, style="bold white")
+        text.append("\n", style="")
 
         if not is_recording:
             text.append("Waveform: ", style="bold cyan")
