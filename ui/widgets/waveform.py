@@ -36,9 +36,10 @@ class WaveformDisplay(Static):
         self.bar_width = 50  # Width of the bar graph
 
     def _get_device_name(self) -> str:
-        """Get the name of the currently selected device."""
+        """Get the name of the currently loaded (active) device."""
         try:
-            device_id = self.app_state.selected_device
+            # Use loaded_device (actually active device)
+            device_id = self.app_state.loaded_device
             if device_id is not None:
                 device_info = sd.query_devices(device_id)
                 return device_info['name']
@@ -77,14 +78,17 @@ class WaveformDisplay(Static):
             return text
 
         # Calculate bar length based on RMS (scale it for visibility)
-        # Log scale for better visualization
-        import math
+        # Linear scale: typical RMS values range from 0.0001 (very quiet) to 0.1+ (loud)
+        # We'll scale to show good range with 0.05 as roughly "full"
+        max_rms_for_scale = 0.05  # Adjust this to change sensitivity
+
+        # Calculate percentage (0-100)
         if rms > 0:
-            # Scale RMS to 0-100 range (adjust multiplier as needed)
-            scaled_rms = min(100, int(math.log10(rms + 1) * 50 + 50))
+            scaled_rms = min(100, int((rms / max_rms_for_scale) * 100))
         else:
             scaled_rms = 0
 
+        # Convert percentage to bar length
         bar_length = int((scaled_rms / 100) * self.bar_width)
         bar_length = max(0, min(bar_length, self.bar_width))
 

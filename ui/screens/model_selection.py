@@ -19,16 +19,27 @@ logger = logging.getLogger("ctrlspeak.ui.model_selection")
 class ModelListItem(ListItem):
     """Custom list item for models."""
 
-    def __init__(self, model_alias: str, model_full_name: str, current: bool = False, **kwargs):
-        """Initialize with model name."""
+    def __init__(self, model_alias: str, model_full_name: str,
+                 is_loaded: bool = False, is_selected: bool = False, **kwargs):
+        """
+        Initialize with model name.
+
+        Args:
+            model_alias: Short alias for the model (e.g., "parakeet-v3")
+            model_full_name: Full model name (e.g., "nvidia/parakeet-tdt-0.6b-v3")
+            is_loaded: This model is currently loaded and running
+            is_selected: This model is saved as preference for next launch
+        """
         self.model_alias = model_alias
         self.model_full_name = model_full_name
 
         # Show alias and full name
         model_text = f"[cyan]{model_alias}[/cyan] → {model_full_name}"
 
-        if current:
-            model_text += " [green][CURRENT][/green]"
+        if is_loaded:
+            model_text += " [green][LOADED][/green]"
+        elif is_selected:
+            model_text += " [dim][PREFERRED][/dim]"
 
         super().__init__(Label(model_text), id=f"model-{model_alias}", **kwargs)
 
@@ -80,7 +91,8 @@ class ModelSelectionScreen(Screen):
                     ModelListItem(
                         model_alias,
                         ModelFactory._DEFAULT_ALIASES.get(model_alias, model_alias),
-                        current=(model_alias == self.app_state.selected_model)
+                        is_loaded=(model_alias == self.app_state.loaded_model),  # Actually running
+                        is_selected=(model_alias == self.app_state.selected_model)  # Saved preference
                     )
                     for model_alias in self.app_state.available_models
                 ],
@@ -89,15 +101,15 @@ class ModelSelectionScreen(Screen):
             yield model_list
 
             yield Label("↑↓ Navigate • Enter to Select • Esc to Go Back", classes="help-text")
-            yield Label("[yellow]Note: Selected model will be used when the app restarts[/yellow]", classes="help-text")
+            yield Label("[green]Model will be loaded immediately (10-30 seconds)[/green]", classes="help-text")
 
     def action_dismiss(self) -> None:
         """Dismiss the screen and go back."""
         self.dismiss()
 
     @on(ListView.Selected)
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        """Handle model selection from ListView."""
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Handle model selection from ListView - trigger hot swap."""
         model_list: ListView = event.control
 
         # Get the index of the selected item
@@ -111,10 +123,26 @@ class ModelSelectionScreen(Screen):
         selected_model = self.app_state.available_models[selected_index]
         logger.info(f"Selected model: {selected_model}")
 
-        # Update app state
+        # Check if it's already loaded
+        if selected_model == self.app_state.loaded_model:
+            self.app.notify("This model is already loaded", severity="information")
+            self.dismiss()
+            return
+
+        # Prevent selection during recording
+        if self.app_state.is_recording:
+            self.app.notify("Cannot switch models while recording", severity="warning")
+            return
+
+        # Prevent selection if already loading a model
+        if self.app_state.is_loading_model:
+            self.app.notify("Model swap already in progress", severity="warning")
+            return
+
+        # Update app state preference
         self.app_state.selected_model = selected_model
 
-        # Save preference to config
+        # Save preference to config for future launches
         try:
             from utils.config import set_preferred_model
             set_preferred_model(selected_model)
@@ -122,8 +150,16 @@ class ModelSelectionScreen(Screen):
         except Exception as e:
             logger.error(f"Error saving model preference: {e}")
 
-        # Dismiss the screen
+        # Dismiss this screen before showing loading screen
         self.dismiss()
+
+        # Trigger hot swap (runs in background)
+        success = await self.app.hot_swap_model(selected_model)
+
+        if success:
+            logger.info(f"Hot swap to {selected_model} completed successfully")
+        else:
+            logger.error(f"Hot swap to {selected_model} failed")
 
     def on_mount(self) -> None:
         """Called when screen is mounted."""

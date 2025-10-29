@@ -53,6 +53,11 @@ class RecordingScreen(Static):
                 classes="device-info-header"
             )
 
+            # Waveform display (RMS bars)
+            yield WaveformDisplay(
+                app_state=self.app_state
+            )
+
             # Main content: Accumulated transcription text (LARGE, scrollable)
             yield AccumulatedTextWidget(
                 app_state=self.app_state,

@@ -43,8 +43,8 @@ class DeviceInfoWidget(Static):
             Tuple of (device_id, device_name, channels, sample_rate)
         """
         try:
-            # Use selected device from app_state if available, otherwise use system default
-            device_id = self.app_state.selected_device if self.app_state.selected_device is not None else (sd.default.device[0] if sd.default.device else None)
+            # Use loaded device from app_state (actually active device) if available, otherwise use system default
+            device_id = self.app_state.loaded_device if self.app_state.loaded_device is not None else (sd.default.device[0] if sd.default.device else None)
 
             if device_id is not None:
                 device_info = sd.query_devices(device_id)
@@ -79,11 +79,19 @@ class DeviceInfoWidget(Static):
 
         # Model info
         text.append(" | ", style="dim")
-        text.append("🤖 Model: ", style="bold green")
 
-        model_alias = self.app_state.selected_model
+        # Show loaded model (not selected preference)
+        model_alias = self.app_state.loaded_model
         model_full_name = ModelFactory._DEFAULT_ALIASES.get(model_alias, model_alias)
-        text.append(f"{model_full_name}", style="bold white")
+
+        # If loading, show indicator
+        if self.app_state.is_loading_model:
+            text.append("🤖 Model: ", style="bold yellow")
+            text.append(f"{model_full_name} ", style="yellow")
+            text.append("[loading...]", style="dim yellow")
+        else:
+            text.append("🤖 Model: ", style="bold green")
+            text.append(f"{model_full_name}", style="bold white")
 
         return text
 

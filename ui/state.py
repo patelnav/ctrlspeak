@@ -33,14 +33,18 @@ class AppState:
         self.current_silence_s: float = 0.0
 
         # Device state
-        self.selected_device: Optional[int] = None
+        self.selected_device: Optional[int] = None  # Device preference (saved for next launch)
+        self.loaded_device: Optional[int] = None     # Actually active device (current runtime state)
         self.available_devices: List[DeviceInfo] = []
 
         # Settings state
         self.rms_threshold: float = 0.01
         self.silence_duration_s: float = 1.0
         self.min_chunk_duration_s: float = 0.5
-        self.selected_model: str = "parakeet"
+        self.selected_model: str = "parakeet"  # Model preference (saved for next launch)
+        self.loaded_model: str = "parakeet"    # Actually loaded model (current runtime state)
+        self.is_loading_model: bool = False    # Whether model is currently being loaded
+        self.model_load_progress: str = ""     # Progress message during model load
         self.available_models: List[str] = [
             "parakeet-v3-mlx",
             "parakeet-v3",

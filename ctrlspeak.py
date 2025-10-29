@@ -119,7 +119,7 @@ def run_app(args):
 
         # Create app state for Textual UI
         app_state = AppState()
-        app_state.selected_model = state.model_type
+        app_state.selected_model = model_type_arg  # Store the alias, not the full name
         state.app_state_ref = app_state  # Store reference for hotkeys to access
 
         state.audio_manager = AudioManager(
@@ -138,6 +138,9 @@ def run_app(args):
         if not state.stt_model:
             console.print("[bold red]Failed to load STT model. Exiting.[/bold red]")
             return 1
+
+        # Sync loaded model state after successful load
+        app_state.loaded_model = model_type_arg  # Store the alias that was actually loaded
 
         console.print(
             Panel.fit(
@@ -161,11 +164,19 @@ def run_app(args):
         with state.audio_manager.start_input_stream():
             logger.info("Starting Textual UI...")
 
+            # Sync loaded device state after stream starts
+            # If input_device is None, resolve to actual default device ID
+            if state.audio_manager.input_device is None:
+                import sounddevice as sd
+                app_state.loaded_device = sd.default.device[0] if sd.default.device else None
+            else:
+                app_state.loaded_device = state.audio_manager.input_device
+
             # Create and run Textual app
             app = CtrlSpeakApp(
                 app_state=app_state,
                 audio_manager=state.audio_manager,
-                model_type=state.model_type
+                model_type=model_type_arg  # Pass the alias, not the resolved full name
             )
 
             # Run the app (this blocks until app exits)

@@ -47,6 +47,7 @@ class AudioManager:
 
         # Audio device selection
         self.input_device = None  # None means use default device
+        self.current_stream = None  # Store active stream for hot swapping
 
         # Phase 2: Add state for RMS detection
         self.RMS_THRESHOLD = 0.01 # EXAMPLE VALUE - NEEDS TUNING LATER!
@@ -273,7 +274,83 @@ class AudioManager:
         device = self.input_device if self.input_device is not None else None
         if device is not None:
             logger.info(f"Using audio device: {device}")
-        return sd.InputStream(device=device, samplerate=SAMPLE_RATE, channels=CHANNELS, callback=self.audio_callback)
+        stream = sd.InputStream(device=device, samplerate=SAMPLE_RATE, channels=CHANNELS, callback=self.audio_callback)
+        self.current_stream = stream
+        return stream
+
+    def restart_input_stream(self, new_device_id):
+        """
+        Restart the audio input stream with a new device.
+        Used for hot-swapping audio devices without restarting the app.
+
+        Args:
+            new_device_id: ID of the new audio input device (or None for default)
+
+        Returns:
+            The new InputStream object
+
+        Raises:
+            Exception: If stream restart fails
+        """
+        logger.info(f"AudioManager: Restarting input stream with device {new_device_id}...")
+
+        try:
+            # Stop current stream if it exists
+            if self.current_stream is not None:
+                try:
+                    logger.debug("Stopping current audio stream...")
+                    self.current_stream.stop()
+                    self.current_stream.close()
+                    logger.info("Current audio stream stopped and closed")
+                except Exception as e:
+                    logger.warning(f"Error stopping current stream (continuing anyway): {e}")
+
+            # Update device
+            self.input_device = new_device_id
+
+            # Create and start new stream
+            logger.info(f"Creating new audio stream with device: {new_device_id}")
+            device = self.input_device if self.input_device is not None else None
+            new_stream = sd.InputStream(
+                device=device,
+                samplerate=SAMPLE_RATE,
+                channels=CHANNELS,
+                callback=self.audio_callback
+            )
+
+            # Start the new stream
+            new_stream.start()
+            self.current_stream = new_stream
+
+            # If device was None, resolve to actual default device for state tracking
+            if new_device_id is None:
+                import sounddevice as sd
+                actual_device_id = sd.default.device[0] if sd.default.device else None
+                logger.info(f"Audio stream successfully restarted with default device (resolved to {actual_device_id})")
+            else:
+                logger.info(f"Audio stream successfully restarted with device {new_device_id}")
+
+            return new_stream
+
+        except Exception as e:
+            logger.error(f"Failed to restart audio stream: {e}", exc_info=True)
+            # Try to restore a working stream with the old device or default
+            logger.warning("Attempting to restore previous audio stream...")
+            try:
+                fallback_stream = sd.InputStream(
+                    device=None,  # Use default device as fallback
+                    samplerate=SAMPLE_RATE,
+                    channels=CHANNELS,
+                    callback=self.audio_callback
+                )
+                fallback_stream.start()
+                self.current_stream = fallback_stream
+                self.input_device = None
+                logger.info("Restored audio stream with default device")
+            except Exception as fallback_error:
+                logger.error(f"Failed to restore audio stream: {fallback_error}")
+
+            raise e
 
 # Remove standalone functions if they are no longer used elsewhere
 # def audio_callback(indata, frames, time, status, audio_queue): ...

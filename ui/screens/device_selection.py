@@ -19,15 +19,24 @@ logger = logging.getLogger("ctrlspeak.ui.device_selection")
 class DeviceListItem(ListItem):
     """Custom list item for audio devices."""
 
-    def __init__(self, device: DeviceInfo, is_current: bool = False, **kwargs):
-        """Initialize with device info."""
+    def __init__(self, device: DeviceInfo, is_active: bool = False, is_selected: bool = False, **kwargs):
+        """
+        Initialize with device info.
+
+        Args:
+            device: Device information
+            is_active: This device is currently active and receiving audio
+            is_selected: This device is saved as preference for next launch
+        """
         self.device = device
         device_text = f"{device.name} (Device #{device.id})"
         device_specs = f"{device.channels}ch @ {device.sample_rate/1000:.1f}kHz"
 
-        # Show current selection
-        if is_current:
-            device_text += " [green][CURRENT][/green]"
+        # Show status tags
+        if is_active:
+            device_text += " [green][ACTIVE][/green]"
+        elif is_selected:
+            device_text += " [dim][PREFERRED][/dim]"
         elif device.is_default:
             device_text += " [dim][DEFAULT][/dim]"
 
@@ -91,7 +100,8 @@ class DeviceSelectionScreen(Screen):
                 *[
                     DeviceListItem(
                         device,
-                        is_current=(device.id == self.app_state.selected_device)
+                        is_active=(device.id == self.app_state.loaded_device),  # Actually active device
+                        is_selected=(device.id == self.app_state.selected_device)  # Saved preference
                     )
                     for device in self.devices
                 ],
@@ -100,6 +110,7 @@ class DeviceSelectionScreen(Screen):
             yield device_list
 
             yield Label("↑↓ Navigate • Enter to Select • Esc to Go Back", classes="help-text")
+            yield Label("[green]Device will switch immediately[/green]", classes="help-text")
 
     def get_available_devices(self) -> list[DeviceInfo]:
         """
@@ -136,8 +147,8 @@ class DeviceSelectionScreen(Screen):
         self.dismiss()
 
     @on(ListView.Selected)
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        """Handle device selection from ListView."""
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Handle device selection from ListView - trigger hot swap."""
         device_list: ListView = event.control
 
         # Get the index of the selected item
@@ -151,19 +162,30 @@ class DeviceSelectionScreen(Screen):
         selected_device = self.devices[selected_index]
         logger.info(f"Selected device: {selected_device.name} (ID: {selected_device.id})")
 
-        # Update app state
+        # Check if it's already the active device
+        if selected_device.id == self.app_state.loaded_device:
+            self.app.notify("This device is already active", severity="information")
+            self.dismiss()
+            return
+
+        # Prevent selection during recording
+        if self.app_state.is_recording:
+            self.app.notify("Cannot switch devices while recording", severity="warning")
+            return
+
+        # Update app state preference
         self.app_state.selected_device = selected_device.id
 
-        # Update audio manager if available
-        if self.audio_manager:
-            try:
-                self.audio_manager.set_input_device(selected_device.id)
-                logger.info(f"Audio device set to ID {selected_device.id}")
-            except Exception as e:
-                logger.error(f"Error setting input device: {e}")
-
-        # Dismiss the screen
+        # Dismiss this screen
         self.dismiss()
+
+        # Trigger hot swap
+        success = await self.app.hot_swap_device(selected_device.id)
+
+        if success:
+            logger.info(f"Hot swap to device {selected_device.id} completed successfully")
+        else:
+            logger.error(f"Hot swap to device {selected_device.id} failed")
 
     def on_mount(self) -> None:
         """Called when screen is mounted."""
