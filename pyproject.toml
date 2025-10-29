@@ -28,12 +28,13 @@ dependencies = [
     "torch>=2.0.0",
     "torchaudio",
     "numpy<2.0.0",
-    
+
     "sounddevice",
     "soundfile",
     "pynput",
     "pyperclip",
     "rich>=13.6.0",
+    "textual>=0.41.0",
     "mlx",
     "parakeet-mlx",
 ]
@@ -49,7 +50,7 @@ Repository = "https://github.com/patelnav/ctrlspeak.git"
 ctrlspeak = "ctrlspeak:main"
 
 [tool.setuptools]
-packages = ["models", "utils"]
+packages = ["models", "utils", "ui", "ui.screens", "ui.widgets"]
 
 [tool.setuptools.package-data]
 "" = ["on.wav", "off.wav"] 

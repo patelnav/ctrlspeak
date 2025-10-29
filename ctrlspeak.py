@@ -52,6 +52,164 @@ def find_cached_models():
     return cached
 
 
+def run_app_textual(args):
+    """Run application with Textual UI"""
+    import threading
+    import torch
+    from models.factory import ModelFactory
+    from utils.keyboard_shortcuts import KeyboardShortcutManager
+    from utils.audio import AudioManager
+    from model_loader import get_model
+    from transcription import transcription_worker
+    from hotkeys import on_activate
+    from ui import CtrlSpeakApp, AppState
+
+    state.startup_time = time.time()
+    setup_logging()
+
+    saved_env_vars = save_environment_variables()
+
+    try:
+        if not check_permissions():
+            logger.warning("Permission check failed.")
+            return 1
+
+        state.DEBUG_MODE = args.debug
+        model_type_arg = args.model
+        state.source_lang = args.source_lang
+        state.target_lang = args.target_lang
+
+        state.model_type = ModelFactory.resolve_model_alias(model_type_arg)
+
+        state.device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+        logger.debug(f"Using device: {state.device}")
+
+        setup_logging_for_mode(state.DEBUG_MODE)
+
+        cached_models = find_cached_models()
+
+        console.print("\n[bold]Model Configuration:[/bold]")
+        if model_type_arg.lower() != state.model_type.lower():
+            console.print(
+                f"  Selected (alias): [cyan]{model_type_arg}[/cyan] -> Resolved: [cyan]{ModelFactory.resolve_model_alias(state.model_type)}[/cyan]"
+            )
+        else:
+            console.print(f"  Selected: [cyan]{ModelFactory.resolve_model_alias(state.model_type)}[/cyan]")
+
+        if cached_models:
+            other_cached = sorted(list(cached_models - {ModelFactory.resolve_model_alias(state.model_type)}))
+            if state.model_type in cached_models:
+                console.print(f"  Status: [green]Found in cache[/green]")
+            else:
+                console.print(f"  Status: [yellow]Not found in cache (will be downloaded)[/yellow]")
+
+            if other_cached:
+                console.print(f"  Other cached models available: {', '.join(other_cached)}")
+        else:
+            console.print("  [yellow]Cache status unknown (or cache empty/inaccessible)[/yellow]")
+
+        if args.check_only:
+            console.print("\n[bold cyan]--check-only specified. Exiting now.[/bold cyan]")
+            sys.exit(0)
+
+        if is_first_run():
+            mark_first_run_complete()
+
+        set_preferred_model(state.model_type)
+
+        # Create app state for Textual UI
+        app_state = AppState()
+        app_state.selected_model = state.model_type
+
+        state.audio_manager = AudioManager(
+            transcription_queue=state.transcription_queue,
+            debug_mode=state.DEBUG_MODE,
+            app_state=app_state
+        )
+
+        state.keyboard_manager = KeyboardShortcutManager()
+        state.keyboard_manager.register_triple_ctrl_tap(on_activate)
+        state.keyboard_manager.register_shortcut('<alt>+<esc>', exit_app)
+
+        restore_environment_variables(saved_env_vars)
+
+        state.stt_model = get_model()
+        if not state.stt_model:
+            console.print("[bold red]Failed to load STT model. Exiting.[/bold red]")
+            return 1
+
+        console.print(
+            Panel.fit(
+                "[bold cyan]ctrlspeak[/bold cyan] - Ready to transcribe.\nTriple-tap [bold]Ctrl[/bold] to start/stop recording.",
+                title="Welcome",
+                border_style="blue",
+            )
+        )
+
+        state.transcription_worker_thread = threading.Thread(
+            target=transcription_worker,
+            args=(state.stt_model, state.transcription_queue, state.transcribed_chunks, state.source_lang, state.target_lang),
+            daemon=True,
+            name="TranscriptionWorker",
+        )
+        state.transcription_worker_thread.start()
+
+        state.keyboard_manager.start_listening()
+
+        # Start audio stream
+        with state.audio_manager.start_input_stream():
+            logger.info("Starting Textual UI...")
+
+            # Create and run Textual app
+            app = CtrlSpeakApp(
+                app_state=app_state,
+                audio_manager=state.audio_manager,
+                model_type=state.model_type
+            )
+
+            # Run the app (this blocks until app exits)
+            app.run()
+
+            logger.info("Textual UI exited, cleaning up...")
+
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Ctrl+C detected. Shutting down...[/bold yellow]")
+        exit_app()
+    finally:
+        logger.info("Executing main finally block for cleanup...")
+
+        if state.keyboard_manager is not None:
+            try:
+                state.keyboard_manager.stop_listening()
+            except Exception as e_kb:
+                logger.error(f"Error stopping keyboard manager in finally: {e_kb}")
+
+        if state.audio_manager:
+            if state.audio_manager.is_collecting:
+                try:
+                    state.audio_manager.stop_recording()
+                except Exception as e_aud_stop:
+                    logger.error(f"Error stopping recording in finally: {e_aud_stop}")
+            try:
+                state.audio_manager.set_is_running(False)
+            except Exception as e_aud_run:
+                logger.error(f"Error setting audio manager not running in finally: {e_aud_run}")
+
+        state.transcription_queue.put(None)
+
+        if state.transcription_worker_thread and state.transcription_worker_thread.is_alive():
+            state.transcription_worker_thread.join(timeout=3.0)
+            if state.transcription_worker_thread.is_alive():
+                logger.warning("Finally: Transcription worker thread did NOT join after timeout.")
+
+        if 'saved_env_vars' in locals():
+            restore_environment_variables(saved_env_vars)
+
+        console.print("[bold green]ctrlspeak stopped.[/bold green]")
+        if 'args' in locals() and not args.check_only:
+            sys.exit(0)
+
+
 def run_app(args):
     """Main application entry point"""
     # Lazy imports to avoid heavy deps during --list-models
@@ -290,7 +448,11 @@ def main():
             
         sys.exit(0)
 
-    run_app(args)
+    # Route to appropriate UI
+    if args.ui == "textual":
+        run_app_textual(args)
+    else:
+        run_app(args)
 
 
 if __name__ == "__main__":

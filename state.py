@@ -32,3 +32,6 @@ main_loop_active = True
 keyboard_manager = None
 
 device = None
+
+source_lang = "en"
+target_lang = "en"

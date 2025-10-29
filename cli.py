@@ -29,7 +29,11 @@ def parse_args_only():
     parser.add_argument("--file", type=str,
                         default=None,
                         help="Path to an audio file to transcribe (for testing).")
-    
+    parser.add_argument("--ui", type=str,
+                        default="textual",
+                        choices=["rich", "textual"],
+                        help="UI mode to use: rich (legacy) or textual (default: %(default)s)")
+
     # Check if -h or --help is present
     if '-h' in sys.argv or '--help' in sys.argv:
         parser.print_help()

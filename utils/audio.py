@@ -29,11 +29,11 @@ CHANNELS = 1
 class AudioManager:
     """Class to manage audio recording and state"""
     
-    def __init__(self, transcription_queue, debug_mode=False):
+    def __init__(self, transcription_queue, debug_mode=False, app_state=None):
         """Initialize the audio manager"""
         self.is_running = True
         self.is_collecting = False
-        self.audio_buffer = [] 
+        self.audio_buffer = []
         self.model_loaded = False # This might be managed elsewhere
         self.console = Console()
         self.recording_start_time = None
@@ -41,15 +41,18 @@ class AudioManager:
         self.live_display = None
         self.debug_mode = debug_mode
         # Store the queue passed from ctrlspeak
-        self.transcription_queue = transcription_queue 
-        
+        self.transcription_queue = transcription_queue
+        # Optional app_state for Textual UI integration
+        self.app_state = app_state
+
         # Phase 2: Add state for RMS detection
         self.RMS_THRESHOLD = 0.01 # EXAMPLE VALUE - NEEDS TUNING LATER!
         # Phase 5 Tuning: Reduce silence duration based on user feedback
-        self.SILENCE_DURATION_S = 1.0 
+        self.SILENCE_DURATION_S = 1.0
         self.MIN_CHUNK_DURATION_S = 0.5 # Avoid transcribing tiny blips
         self.current_silence_s = 0.0
         self.is_potentially_speaking = False # Track if we heard sound recently
+        self.last_rms = 0.0 # Store last RMS value for app_state updates
     
     def set_debug_mode(self, debug_mode):
         """Set debug mode"""
@@ -132,11 +135,17 @@ class AudioManager:
         # Calculate RMS
         try:
             rms = np.sqrt(np.mean(chunk**2))
-            logger.debug(f"RMS: {rms:.6f}") 
+            logger.debug(f"RMS: {rms:.6f}")
+            self.last_rms = rms
+
+            # Update app_state if available (for Textual UI)
+            if self.app_state:
+                self.app_state.current_rms = rms
+                self.app_state.buffer_size_samples = len(self.audio_buffer)
         except Exception as e:
             logger.error(f"Error calculating RMS: {e}")
             rms = 0 # Assign a default value on error
-            
+
         # --- Phase 3: Segmentation Logic ---
         is_speech_chunk = rms >= self.RMS_THRESHOLD
 
@@ -153,6 +162,10 @@ class AudioManager:
             # Silence detected *after* we were potentially speaking
             self.current_silence_s += current_chunk_duration_s
             logger.debug(f"Silence accumulating: {self.current_silence_s:.2f}s / {self.SILENCE_DURATION_S}s")
+
+            # Update app_state with current silence
+            if self.app_state:
+                self.app_state.current_silence_s = self.current_silence_s
             
             # Check if silence duration threshold is met
             if self.current_silence_s >= self.SILENCE_DURATION_S:
