@@ -6,16 +6,22 @@ import logging
 from typing import Optional
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Vertical, Horizontal
 from textual.widgets import Header, Footer, Static, Label
 from textual.reactive import reactive
 from textual import on
+import sys
+import os
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .state import AppState
+import state
 from .screens.recording import RecordingScreen
 from .screens.device_selection import DeviceSelectionScreen
-from .screens.settings import SettingsScreen
 from .screens.help import HelpScreen
+from .screens.model_selection import ModelSelectionScreen
+from .screens.log_viewer import LogViewerScreen
 
 logger = logging.getLogger("ctrlspeak.ui")
 
@@ -37,57 +43,56 @@ class CtrlSpeakApp(App):
     }
 
     #main-container {
-        height: 100%;
+        height: 1fr;
         width: 100%;
     }
 
-    .app-title {
-        background: $primary;
-        color: $text;
-        text-align: center;
-        padding: 1;
-        text-style: bold;
+    #recording-layout {
+        height: 100%;
+        width: 100%;
+        border: none;
     }
 
-    .status-bar {
-        background: $panel;
-        color: $text;
-        padding: 0 1;
-        height: 1;
+    RecordingScreen {
+        height: 100%;
+        width: 100%;
+        border: none;
     }
 
-    .recording-indicator {
-        color: $error;
-        text-style: bold;
-    }
-
-    .waveform {
-        height: 7;
-        border: solid $primary;
-        padding: 1;
-    }
-
-    .device-info {
-        height: 3;
+    /* Compact header with device and model info */
+    .device-info-header {
+        height: auto;
         border: solid $accent;
         padding: 1;
+        margin-bottom: 1;
+        width: 100%;
+    }
+
+    /* Main content area - accumulated text takes up most space */
+    .accumulated-text-main {
+        height: 1fr;
+        width: 100%;
+        margin-bottom: 1;
     }
 
     .recording-status {
         height: auto;
         padding: 1;
+        margin-bottom: 1;
     }
 
     .help-text {
         color: $text-muted;
         text-align: center;
         padding: 1;
+        margin: 0;
     }
     """
 
     BINDINGS = [
         Binding("d", "show_devices", "Devices", show=True),
-        Binding("s", "show_settings", "Settings", show=True),
+        Binding("m", "show_models", "Models", show=True),
+        Binding("l", "show_logs", "Logs", show=True),
         Binding("h", "show_help", "Help", show=True),
         Binding("q", "quit", "Quit", show=True),
         Binding("ctrl+c", "quit", "Quit", show=False),
@@ -115,6 +120,7 @@ class CtrlSpeakApp(App):
         self.app_state = app_state or AppState()
         self.audio_manager = audio_manager
         self.app_state.selected_model = model_type
+        self.last_transcription_count = 0  # Track new transcriptions
 
         # Update interval for live data (in seconds)
         self.update_interval = 0.1
@@ -122,8 +128,9 @@ class CtrlSpeakApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header(show_clock=True)
-        yield Container(
-            RecordingScreen(app_state=self.app_state, audio_manager=self.audio_manager),
+        yield RecordingScreen(
+            app_state=self.app_state,
+            audio_manager=self.audio_manager,
             id="main-container"
         )
         yield Footer()
@@ -136,11 +143,24 @@ class CtrlSpeakApp(App):
         self.set_interval(self.update_interval, self.update_recording_state)
 
     def update_recording_state(self) -> None:
-        """Periodically update recording state from audio manager."""
+        """Periodically update recording state from audio manager and sync transcribed chunks."""
         if self.audio_manager:
             self.app_state.update_from_audio_manager(self.audio_manager)
-            # Notify the recording screen to refresh
-            self.refresh()
+
+        # Sync new transcribed chunks into accumulated text
+        if len(state.transcribed_chunks) > self.last_transcription_count:
+            new_chunks = state.transcribed_chunks[self.last_transcription_count:]
+            for chunk_text in new_chunks:
+                if chunk_text:
+                    # Add space between chunks if text already exists
+                    if self.app_state.accumulated_text.strip():
+                        self.app_state.accumulated_text += " " + chunk_text.strip()
+                    else:
+                        self.app_state.accumulated_text = chunk_text.strip()
+            self.last_transcription_count = len(state.transcribed_chunks)
+
+        # Notify the recording screen to refresh
+        self.refresh()
 
     async def action_show_devices(self) -> None:
         """Show device selection screen."""
@@ -150,13 +170,15 @@ class CtrlSpeakApp(App):
             audio_manager=self.audio_manager
         ))
 
-    async def action_show_settings(self) -> None:
-        """Show settings screen."""
-        logger.info("Settings screen requested")
-        await self.push_screen(SettingsScreen(
-            app_state=self.app_state,
-            audio_manager=self.audio_manager
-        ))
+    async def action_show_models(self) -> None:
+        """Show model selection screen."""
+        logger.info("Model selection requested")
+        await self.push_screen(ModelSelectionScreen(app_state=self.app_state))
+
+    async def action_show_logs(self) -> None:
+        """Show log viewer screen."""
+        logger.info("Log viewer requested")
+        await self.push_screen(LogViewerScreen(app_state=self.app_state))
 
     async def action_show_help(self) -> None:
         """Show help screen."""

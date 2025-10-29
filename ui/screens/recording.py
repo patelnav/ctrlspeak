@@ -12,6 +12,7 @@ from ..state import AppState
 from ..widgets.waveform import WaveformDisplay
 from ..widgets.device_info import DeviceInfoWidget
 from ..widgets.status_bar import RecordingStatusWidget
+from ..widgets.accumulated_text import AccumulatedTextWidget
 
 logger = logging.getLogger("ctrlspeak.ui.recording")
 
@@ -44,21 +45,21 @@ class RecordingScreen(Static):
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
-        with Vertical():
-            # Device info section
+        with Vertical(id="recording-layout"):
+            # Top section: Device/model info (compact header)
             yield DeviceInfoWidget(
                 app_state=self.app_state,
                 audio_manager=self.audio_manager,
-                classes="device-info"
+                classes="device-info-header"
             )
 
-            # Waveform display
-            yield WaveformDisplay(
+            # Main content: Accumulated transcription text (LARGE, scrollable)
+            yield AccumulatedTextWidget(
                 app_state=self.app_state,
-                classes="waveform"
+                classes="accumulated-text-main"
             )
 
-            # Recording status
+            # Recording status (compact)
             yield RecordingStatusWidget(
                 app_state=self.app_state,
                 classes="recording-status"

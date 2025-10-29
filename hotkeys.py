@@ -12,9 +12,14 @@ def on_activate():
         if not state.model_loaded:
             state.console.print("[bold yellow]Model is still loading. Please wait...[/bold yellow]")
             return
-            
+
         state.transcribed_chunks.clear()
         logger.info("Cleared previous transcribed chunks.")
+
+        # Reset accumulated text for UI
+        if hasattr(state, 'app_state_ref') and state.app_state_ref:
+            state.app_state_ref.accumulated_text = ""
+            logger.debug("Reset accumulated text for new recording.")
 
         logger.debug("Playing start beep...")
         play_start_beep()

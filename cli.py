@@ -29,10 +29,6 @@ def parse_args_only():
     parser.add_argument("--file", type=str,
                         default=None,
                         help="Path to an audio file to transcribe (for testing).")
-    parser.add_argument("--ui", type=str,
-                        default="textual",
-                        choices=["rich", "textual"],
-                        help="UI mode to use: rich (legacy) or textual (default: %(default)s)")
     parser.add_argument("--check-compatibility", action="store_true",
                         help="Check compatibility of installed models and exit.")
 

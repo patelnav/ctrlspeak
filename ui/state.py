@@ -41,6 +41,16 @@ class AppState:
         self.silence_duration_s: float = 1.0
         self.min_chunk_duration_s: float = 0.5
         self.selected_model: str = "parakeet"
+        self.available_models: List[str] = [
+            "parakeet-v3-mlx",
+            "parakeet-v3",
+            "parakeet-v2-mlx",
+            "parakeet-v2",
+            "canary",
+            "canary-180m",
+            "canary-v2",
+            "whisper"
+        ]
         self.source_lang: str = "en"
         self.target_lang: str = "en"
 
@@ -48,6 +58,7 @@ class AppState:
         self.current_screen: str = "recording"
         self.transcription_text: str = ""
         self.last_transcription: str = ""
+        self.accumulated_text: str = ""  # Text buffer that accumulates until next triple-tap
 
         # Statistics
         self.total_transcriptions: int = 0

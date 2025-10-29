@@ -8,6 +8,7 @@ from textual.widgets import Static
 from rich.text import Text
 
 from ..state import AppState
+from models.factory import ModelFactory
 
 logger = logging.getLogger("ctrlspeak.ui.device_info")
 
@@ -60,22 +61,29 @@ class DeviceInfoWidget(Static):
         return (None, "Unknown Device", 1, 16000)
 
     def render(self) -> Text:
-        """Render the device info display."""
+        """Render the device and model info display."""
         device_id, device_name, channels, sample_rate = self.get_device_info()
 
         text = Text()
-        text.append("Audio Device: ", style="bold cyan")
 
+        # Device info
+        text.append("📻 Device: ", style="bold cyan")
         if device_id is not None:
             text.append(device_name, style="bold white")
-            text.append(f" (Device #{device_id})", style="dim")
+            text.append(f" (#{device_id})", style="dim")
         else:
             text.append(device_name, style="yellow")
 
         text.append(" | ", style="dim")
-        text.append(f"{channels}ch", style="cyan")
+        text.append(f"{channels}ch @ {sample_rate/1000:.1f}kHz", style="cyan")
+
+        # Model info
         text.append(" | ", style="dim")
-        text.append(f"{sample_rate/1000:.1f}kHz", style="cyan")
+        text.append("🤖 Model: ", style="bold green")
+
+        model_alias = self.app_state.selected_model
+        model_full_name = ModelFactory._DEFAULT_ALIASES.get(model_alias, model_alias)
+        text.append(f"{model_full_name}", style="bold white")
 
         return text
 

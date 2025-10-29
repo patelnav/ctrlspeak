@@ -19,14 +19,17 @@ logger = logging.getLogger("ctrlspeak.ui.device_selection")
 class DeviceListItem(ListItem):
     """Custom list item for audio devices."""
 
-    def __init__(self, device: DeviceInfo, **kwargs):
+    def __init__(self, device: DeviceInfo, is_current: bool = False, **kwargs):
         """Initialize with device info."""
         self.device = device
         device_text = f"{device.name} (Device #{device.id})"
         device_specs = f"{device.channels}ch @ {device.sample_rate/1000:.1f}kHz"
 
-        if device.is_default:
-            device_text += " [DEFAULT]"
+        # Show current selection
+        if is_current:
+            device_text += " [green][CURRENT][/green]"
+        elif device.is_default:
+            device_text += " [dim][DEFAULT][/dim]"
 
         label_text = f"{device_text} - {device_specs}"
         super().__init__(Label(label_text), id=f"device-{device.id}", **kwargs)
@@ -83,9 +86,15 @@ class DeviceSelectionScreen(Screen):
                 yield Label("Press Esc to go back", classes="help-text")
                 return
 
-            # Create interactive list view
+            # Create interactive list view with current selection marked
             device_list = ListView(
-                *[DeviceListItem(device) for device in self.devices],
+                *[
+                    DeviceListItem(
+                        device,
+                        is_current=(device.id == self.app_state.selected_device)
+                    )
+                    for device in self.devices
+                ],
                 id="device-list"
             )
             yield device_list
