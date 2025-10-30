@@ -153,9 +153,11 @@ class CanaryModel(BaseSTTModel):
             end_time = time.time()
             logger.info(f"Transcription completed in {end_time - start_time:.2f} seconds")
             return transcriptions
-            
+
         except Exception as e:
-            logger.error(f"Error during transcription: {str(e)}")
+            # Suppress tqdm multiprocessing errors (non-fatal, see TQDM_ISSUE_ANALYSIS.md)
+            if "fds_to_keep" not in str(e):
+                logger.error(f"Error during transcription: {str(e)}")
             raise
     
     @property

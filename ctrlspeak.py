@@ -5,6 +5,11 @@ Triple-tap Ctrl to start/stop recording.
 """
 import sys
 import os
+from utils.tqdm_lock import ensure_tqdm_thread_lock  # lightweight import
+
+# Apply immediately at import time to preempt tqdm's default lock behavior
+ensure_tqdm_thread_lock()
+
 import time
 import threading
 import logging

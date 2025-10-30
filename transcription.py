@@ -3,10 +3,15 @@ import time
 import os
 import tempfile
 import logging
+import warnings
 import numpy as np
 import soundfile as sf
 import state
 from utils.audio import SAMPLE_RATE
+
+# Suppress tqdm multiprocessing warnings (they're non-fatal but noisy)
+# See TQDM_ISSUE_ANALYSIS.md for detailed explanation
+warnings.filterwarnings('ignore', category=RuntimeWarning, module='tqdm')
 
 logger = logging.getLogger("ctrlspeak")
 
@@ -67,7 +72,9 @@ def transcription_worker(model, work_queue, results_list, source_lang, target_la
                  transcription_duration = time.time() - transcription_start_time
                  logger.info(f"Worker transcribed chunk in {transcription_duration:.2f}s: {text[:30]}...")
             except Exception as transcribe_e:
-                 logger.error(f"Worker: Error during model transcription: {transcribe_e}", exc_info=True)
+                 # Suppress tqdm multiprocessing errors (non-fatal, see TQDM_ISSUE_ANALYSIS.md)
+                 if "fds_to_keep" not in str(transcribe_e):
+                     logger.error(f"Worker: Error during model transcription: {transcribe_e}", exc_info=True)
                  text = None
 
             if text:
