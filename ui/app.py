@@ -154,6 +154,11 @@ class CtrlSpeakApp(App):
         if self.audio_manager:
             self.app_state.update_from_audio_manager(self.audio_manager)
 
+        # Detect if transcribed_chunks was cleared (new recording started)
+        if len(state.transcribed_chunks) < self.last_transcription_count:
+            logger.debug(f"Detected chunks cleared, resetting last_transcription_count from {self.last_transcription_count} to 0")
+            self.last_transcription_count = 0
+
         # Sync new transcribed chunks into accumulated text
         if len(state.transcribed_chunks) > self.last_transcription_count:
             new_chunks = state.transcribed_chunks[self.last_transcription_count:]
