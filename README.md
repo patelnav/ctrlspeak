@@ -10,7 +10,8 @@
 
 **ctrlSPEAK** is your *set-it-and-forget-it* speech-to-text companion. Triple-tap `Ctrl`, speak your mind, and watch your words appear wherever your cursor blinks — effortlessly copied and pasted. Built for macOS, it's lightweight, low-overhead, and stays out of your way until you call it.
 
-<video src="ctrlspeak-demo.mp4" autoplay loop muted playsinline width="100%"></video>
+<video src="https://github.com/user-attachments/assets/67fa9dcf-2501-4964-b8f3-631bc96510e0" autoplay loop muted playsinline width="100%"></video>
+
 
 ## ✨ Features
 
