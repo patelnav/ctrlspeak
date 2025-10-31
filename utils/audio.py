@@ -324,7 +324,6 @@ class AudioManager:
 
             # If device was None, resolve to actual default device for state tracking
             if new_device_id is None:
-                import sounddevice as sd
                 actual_device_id = sd.default.device[0] if sd.default.device else None
                 logger.info(f"Audio stream successfully restarted with default device (resolved to {actual_device_id})")
             else:
