@@ -8,13 +8,8 @@ from utils.history import get_history_manager
 
 logger = logging.getLogger("ctrlspeak")
 
-# Track recording start time for duration calculation
-_recording_start_time = None
-
 def on_activate():
     """Handle global hotkey activation"""
-    global _recording_start_time
-
     if not state.audio_manager.is_collecting:
         # Check if model is being swapped
         if hasattr(state, 'app_state_ref') and state.app_state_ref:
@@ -38,7 +33,7 @@ def on_activate():
         logger.debug("Playing start beep...")
         play_start_beep()
         logger.debug("Calling audio_manager.start_recording()...")
-        _recording_start_time = time.time()
+        state.recording_start_time = time.time()
         state.audio_manager.start_recording()
     else:
         logger.info("Stop activated. Stopping audio recording...")
@@ -53,8 +48,9 @@ def on_activate():
         if final_text:
             # Calculate recording duration
             duration_seconds = 0.0
-            if _recording_start_time:
-                duration_seconds = time.time() - _recording_start_time
+            if state.recording_start_time:
+                duration_seconds = time.time() - state.recording_start_time
+                state.recording_start_time = None  # Reset for next recording
 
             logger.info(f"Final text (len {len(final_text)} chars): {final_text[:100]}...")
             copy_to_clipboard(final_text)
