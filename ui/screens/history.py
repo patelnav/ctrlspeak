@@ -5,9 +5,9 @@ Browse, view, copy, and delete past transcriptions.
 """
 
 import logging
-from textual.screen import Screen
-from textual.containers import Container, Vertical
-from textual.widgets import Static, Label, ListItem, ListView
+from textual.screen import Screen, ModalScreen
+from textual.containers import Container, Vertical, Horizontal
+from textual.widgets import Static, Label, ListItem, ListView, Button
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual import on
@@ -17,6 +17,56 @@ from utils.history import get_history_manager, HistoryEntry
 from utils.clipboard import copy_to_clipboard
 
 logger = logging.getLogger("ctrlspeak.ui.history")
+
+
+class DeleteConfirmDialog(ModalScreen):
+    """Confirmation dialog for deleting history entry."""
+
+    CSS = """
+    DeleteConfirmDialog {
+        align: center middle;
+    }
+
+    #dialog {
+        width: 60;
+        height: 9;
+        border: thick $error;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    #question {
+        width: 100%;
+        content-align: center middle;
+        padding: 1;
+    }
+
+    Button {
+        margin: 0 1;
+    }
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", show=False),
+    ]
+
+    def __init__(self, entry_preview: str, **kwargs):
+        super().__init__(**kwargs)
+        self.entry_preview = entry_preview
+
+    def compose(self) -> ComposeResult:
+        with Container(id="dialog"):
+            yield Label("Delete this transcription?", id="question")
+            yield Label(f'"{self.entry_preview[:50]}..."', id="question")
+            with Horizontal():
+                yield Button("Cancel", variant="default", id="cancel")
+                yield Button("Delete", variant="error", id="confirm")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "confirm")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
 
 
 class HistoryListItem(ListItem):
@@ -147,8 +197,8 @@ class HistoryScreen(Screen):
             logger.error(f"Failed to copy to clipboard: {e}")
             self.app.notify("Failed to copy to clipboard", severity="error")
 
-    def action_delete_selected(self) -> None:
-        """Delete the selected entry."""
+    async def action_delete_selected(self) -> None:
+        """Delete the selected entry after confirmation."""
         history_list = self.query_one("#history-list", ListView)
         selected_index = history_list.index
 
@@ -158,12 +208,18 @@ class HistoryScreen(Screen):
 
         entry = self.entries[selected_index]
 
+        # Show confirmation dialog
+        confirmed = await self.app.push_screen_wait(
+            DeleteConfirmDialog(entry_preview=entry.preview)
+        )
+
+        if not confirmed:
+            return
+
         # Delete from database
         if self.history_manager.delete_entry(entry.id):
             self.app.notify(f"Deleted entry from {entry.formatted_timestamp}", severity="information")
             logger.info(f"Deleted history entry {entry.id}")
-
-            # Refresh the screen by re-mounting
             self.refresh_entries()
         else:
             self.app.notify("Failed to delete entry", severity="error")
