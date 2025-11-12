@@ -19,9 +19,6 @@ logger = logging.getLogger("ctrlspeak.hotkeys")
 # Track which mode we're in for the current recording session
 _current_session_streaming = False
 
-# Track recording start time for duration calculation
-_recording_start_time = None
-
 
 def _start_queue_recording():
     """Start recording in queue-based mode (original behavior)."""
@@ -56,7 +53,7 @@ def on_activate():
 
     Routes to streaming or queue-based mode depending on model capabilities.
     """
-    global _current_session_streaming, _recording_start_time
+    global _current_session_streaming
 
     if not state.audio_manager.is_collecting:
         # =================================================================
@@ -77,8 +74,8 @@ def on_activate():
         # Play start beep
         play_start_beep()
 
-        # Track recording start time for history
-        _recording_start_time = time.time()
+        # Track recording start time for history (stored in state for thread safety)
+        state.recording_start_time = time.time()
 
         # Determine if we should use streaming mode
         if streaming.is_model_streaming_capable():
@@ -108,8 +105,9 @@ def on_activate():
         if final_text:
             # Calculate recording duration
             duration_seconds = 0.0
-            if _recording_start_time:
-                duration_seconds = time.time() - _recording_start_time
+            if state.recording_start_time:
+                duration_seconds = time.time() - state.recording_start_time
+                state.recording_start_time = None  # Reset for next recording
 
             logger.info(f"Final text ({len(final_text)} chars): {final_text[:100]}...")
             copy_to_clipboard(final_text)
@@ -137,4 +135,3 @@ def on_activate():
 
         # Reset session state
         _current_session_streaming = False
-        _recording_start_time = None
