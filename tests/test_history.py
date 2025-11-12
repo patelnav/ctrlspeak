@@ -1,79 +1,173 @@
 #!/usr/bin/env python3
 """
-Quick test script for history functionality.
+Test suite for history functionality.
 """
 
-import tempfile
+import pytest
+import time
 from pathlib import Path
-from utils.history import HistoryManager, get_history_manager
+from utils.history import HistoryManager, HistoryEntry
 
-def test_history_basic():
-    """Test basic history operations."""
-    print("Testing history functionality...")
 
-    # Use a temporary database for testing
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test_history.db"
-        history = HistoryManager(db_path=db_path)
+@pytest.fixture
+def temp_db(tmp_path):
+    """Fixture providing temporary database path."""
+    return tmp_path / "test_history.db"
 
-        print(f"✓ Created history manager with DB at {db_path}")
 
-        # Test adding entries
-        entry_id1 = history.add_entry(
-            text="This is a test transcription",
-            model="parakeet",
-            duration_seconds=5.2,
-            language="en"
-        )
-        assert entry_id1 is not None, "Failed to add entry 1"
-        print(f"✓ Added entry 1 (ID: {entry_id1})")
+@pytest.fixture
+def history(temp_db):
+    """Fixture providing clean history manager instance."""
+    return HistoryManager(db_path=temp_db)
 
-        entry_id2 = history.add_entry(
-            text="Another test transcription with more words",
-            model="whisper",
-            duration_seconds=8.7,
-            language="en"
-        )
-        assert entry_id2 is not None, "Failed to add entry 2"
-        print(f"✓ Added entry 2 (ID: {entry_id2})")
 
-        # Test retrieving entries
-        entries = history.get_recent(limit=10)
-        assert len(entries) == 2, f"Expected 2 entries, got {len(entries)}"
-        print(f"✓ Retrieved {len(entries)} entries")
+def test_add_entry(history):
+    """Test adding a valid entry."""
+    entry_id = history.add_entry(
+        text="This is a test transcription",
+        model="parakeet",
+        duration_seconds=5.2,
+        language="en"
+    )
+    assert entry_id is not None
+    assert entry_id > 0
 
-        # Check order (most recent first)
-        assert entries[0].id == entry_id2, "Entries not in correct order"
-        assert entries[1].id == entry_id1, "Entries not in correct order"
-        print("✓ Entries in correct order (most recent first)")
 
-        # Test get by ID
-        entry = history.get_by_id(entry_id1)
-        assert entry is not None, "Failed to get entry by ID"
-        assert entry.text == "This is a test transcription", "Text mismatch"
-        assert entry.model == "parakeet", "Model mismatch"
-        print(f"✓ Retrieved entry by ID: {entry.text[:30]}...")
+def test_add_multiple_entries(history):
+    """Test adding multiple entries."""
+    id1 = history.add_entry("First", "parakeet", 5.2, "en")
+    id2 = history.add_entry("Second", "whisper", 8.7, "en")
 
-        # Test statistics
-        stats = history.get_stats()
-        assert stats['total_entries'] == 2, f"Expected 2 entries in stats, got {stats['total_entries']}"
-        print(f"✓ Stats: {stats}")
+    assert id2 > id1
+    entries = history.get_recent(limit=10)
+    assert len(entries) == 2
 
-        # Test delete
-        success = history.delete_entry(entry_id1)
-        assert success, "Failed to delete entry"
-        print(f"✓ Deleted entry {entry_id1}")
 
-        entries = history.get_recent(limit=10)
-        assert len(entries) == 1, f"Expected 1 entry after delete, got {len(entries)}"
-        print(f"✓ Confirmed deletion (1 entry remaining)")
+def test_get_recent_order(history):
+    """Test that get_recent returns most recent first."""
+    id1 = history.add_entry("First", "parakeet", 1.0)
+    time.sleep(0.01)  # Ensure different timestamps
+    id2 = history.add_entry("Second", "parakeet", 1.0)
 
-        # Test empty text handling
-        empty_id = history.add_entry(text="", model="test", duration_seconds=0)
-        assert empty_id is None, "Should not add empty text"
-        print("✓ Correctly rejected empty text")
+    entries = history.get_recent(limit=10)
 
-        print("\n✅ All tests passed!")
+    assert entries[0].id == id2  # Most recent first
+    assert entries[1].id == id1
+
+
+def test_get_by_id(history):
+    """Test retrieving entry by ID."""
+    entry_id = history.add_entry("Test text", "parakeet", 5.2, "en")
+    entry = history.get_by_id(entry_id)
+
+    assert entry is not None
+    assert entry.id == entry_id
+    assert entry.text == "Test text"
+    assert entry.model == "parakeet"
+    assert entry.duration_seconds == 5.2
+
+
+def test_get_by_id_not_found(history):
+    """Test get_by_id returns None for non-existent ID."""
+    assert history.get_by_id(99999) is None
+
+
+def test_delete_entry(history):
+    """Test deleting an entry."""
+    entry_id = history.add_entry("Test", "parakeet", 1.0)
+
+    assert history.get_by_id(entry_id) is not None
+    assert history.delete_entry(entry_id) is True
+    assert history.get_by_id(entry_id) is None
+
+
+def test_delete_nonexistent(history):
+    """Test deleting non-existent entry returns False."""
+    assert history.delete_entry(99999) is False
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("", None),           # Empty string
+    ("   ", None),        # Only whitespace
+    ("\t\n", None),       # Only tabs/newlines
+    ("Valid", int),       # Valid text
+])
+def test_add_entry_validation(history, text, expected):
+    """Test validation of text input."""
+    result = history.add_entry(text, "parakeet", 1.0)
+
+    if expected is None:
+        assert result is None
+    else:
+        assert isinstance(result, expected)
+
+
+def test_get_stats(history):
+    """Test statistics calculation."""
+    history.add_entry("Hello world", "parakeet", 2.5)
+    history.add_entry("Test", "whisper", 3.5)
+
+    stats = history.get_stats()
+
+    assert stats['total_entries'] == 2
+    assert stats['total_duration'] == 6.0
+    assert stats['total_words'] > 0
+
+
+def test_clear_all(history):
+    """Test clearing all entries."""
+    history.add_entry("Test 1", "parakeet", 1.0)
+    history.add_entry("Test 2", "parakeet", 1.0)
+
+    assert len(history.get_recent(limit=10)) == 2
+    assert history.clear_all() is True
+    assert len(history.get_recent(limit=10)) == 0
+
+
+def test_entry_formatted_timestamp():
+    """Test HistoryEntry formatted timestamp."""
+    entry = HistoryEntry(
+        id=1,
+        timestamp="2024-01-15T10:30:00",
+        text="Test",
+        model="parakeet",
+        duration_seconds=5.0,
+        language="en"
+    )
+
+    formatted = entry.formatted_timestamp
+    assert "2024-01-15" in formatted
+    assert "10:30:00" in formatted
+
+
+def test_entry_preview_short():
+    """Test preview for short text."""
+    entry = HistoryEntry(
+        id=1,
+        timestamp="2024-01-15T10:30:00",
+        text="Short",
+        model="parakeet",
+        duration_seconds=5.0,
+        language="en"
+    )
+    assert entry.preview == "Short"
+
+
+def test_entry_preview_long():
+    """Test preview truncates long text."""
+    long_text = "a" * 200
+    entry = HistoryEntry(
+        id=1,
+        timestamp="2024-01-15T10:30:00",
+        text=long_text,
+        model="parakeet",
+        duration_seconds=5.0,
+        language="en"
+    )
+
+    assert len(entry.preview) <= 103
+    assert entry.preview.endswith("...")
+
 
 if __name__ == "__main__":
-    test_history_basic()
+    pytest.main([__file__, "-v"])
