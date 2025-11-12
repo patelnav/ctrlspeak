@@ -5,16 +5,18 @@ Browse, view, copy, and delete past transcriptions.
 """
 
 import logging
-from textual.screen import Screen, ModalScreen
-from textual.containers import Container, Vertical, Horizontal
-from textual.widgets import Static, Label, ListItem, ListView, Button
+
+from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual import on
+from textual.containers import Container, Horizontal
+from textual.screen import ModalScreen, Screen
+from textual.widgets import Button, Label, ListItem, ListView
+
+from utils.clipboard import copy_to_clipboard
+from utils.history import HistoryEntry, get_history_manager
 
 from ..state import AppState
-from utils.history import get_history_manager, HistoryEntry
-from utils.clipboard import copy_to_clipboard
 
 logger = logging.getLogger("ctrlspeak.ui.history")
 
@@ -29,7 +31,7 @@ class DeleteConfirmDialog(ModalScreen):
 
     #dialog {
         width: 60;
-        height: 9;
+        height: auto;
         border: thick $error;
         background: $surface;
         padding: 1 2;
@@ -41,8 +43,23 @@ class DeleteConfirmDialog(ModalScreen):
         padding: 1;
     }
 
+    #preview {
+        width: 100%;
+        content-align: center middle;
+        padding: 0 1 1 1;
+        color: $text-muted;
+    }
+
+    #buttons {
+        width: 100%;
+        height: auto;
+        align: center middle;
+        padding: 1 0 0 0;
+    }
+
     Button {
         margin: 0 1;
+        min-width: 16;
     }
     """
 
@@ -56,10 +73,10 @@ class DeleteConfirmDialog(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="dialog"):
-            yield Label("Delete this transcription?", id="question")
-            yield Label(f'"{self.entry_preview[:50]}..."', id="question")
-            with Horizontal():
-                yield Button("Cancel", variant="default", id="cancel")
+            yield Label("⚠️  Delete this transcription?", id="question")
+            yield Label(f'"{self.entry_preview[:50]}..."', id="preview")
+            with Horizontal(id="buttons"):
+                yield Button("Cancel (Esc)", variant="default", id="cancel")
                 yield Button("Delete", variant="error", id="confirm")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -83,7 +100,11 @@ class HistoryListItem(ListItem):
 
         # Format: timestamp | preview (first 60 chars) | model | duration
         timestamp_str = entry.formatted_timestamp
-        preview = entry.preview[:60] + "..." if len(entry.preview) > 60 else entry.preview
+        preview = (
+            entry.preview[:60] + "..."
+            if len(entry.preview) > 60
+            else entry.preview
+        )
         duration_str = f"{entry.duration_seconds:.1f}s"
 
         # Build the display text
@@ -101,9 +122,21 @@ class HistoryScreen(Screen):
     """
 
     CSS = """
+    HistoryScreen {
+        padding: 0 1;
+    }
+
+    .screen-title {
+        text-align: center;
+        padding: 1;
+        margin-bottom: 1;
+        color: $accent;
+    }
+
     ListView {
         height: 1fr;
         border: solid $primary;
+        margin-bottom: 1;
     }
 
     ListItem {
@@ -120,6 +153,14 @@ class HistoryScreen(Screen):
         color: $text-muted;
         text-align: center;
         padding: 1;
+        margin-bottom: 1;
+    }
+
+    .help-text {
+        color: $text-muted;
+        text-align: center;
+        padding: 1;
+        margin: 0;
     }
     """
 
@@ -152,8 +193,14 @@ class HistoryScreen(Screen):
             self.entries = self.history_manager.get_recent(limit=100)
 
             if not self.entries:
-                yield Label("[yellow]No transcription history yet.[/yellow]", classes="help-text")
-                yield Label("Start recording to create history entries!", classes="help-text")
+                yield Label(
+                    "[yellow]No transcription history yet.[/yellow]",
+                    classes="help-text",
+                )
+                yield Label(
+                    "Start recording to create history entries!",
+                    classes="help-text",
+                )
                 yield Label("Press Esc to go back", classes="help-text")
                 return
 
@@ -162,18 +209,21 @@ class HistoryScreen(Screen):
             stats_text = (
                 f"Total: {stats['total_entries']} entries | "
                 f"~{stats['total_words']:,} words | "
-                f"~{stats['total_duration']/60:.1f} minutes recorded"
+                f"~{stats['total_duration'] / 60:.1f} minutes recorded"
             )
             yield Label(stats_text, classes="stats-text")
 
             # Create interactive list view
             history_list = ListView(
                 *[HistoryListItem(entry) for entry in self.entries],
-                id="history-list"
+                id="history-list",
             )
             yield history_list
 
-            yield Label("↑↓ Navigate • Enter/C to Copy • Delete to Remove • Esc to Go Back", classes="help-text")
+            yield Label(
+                "↑↓ Navigate • Enter/c to Copy • d to Remove • Esc to Go Back",
+                classes="help-text",
+            )
 
     def action_dismiss(self) -> None:
         """Dismiss the screen and go back."""
@@ -184,31 +234,47 @@ class HistoryScreen(Screen):
         history_list = self.query_one("#history-list", ListView)
         selected_index = history_list.index
 
-        if selected_index is None or selected_index < 0 or selected_index >= len(self.entries):
+        if (
+            selected_index is None
+            or selected_index < 0
+            or selected_index >= len(self.entries)
+        ):
             self.app.notify("No entry selected", severity="warning")
             return
 
         entry = self.entries[selected_index]
         try:
             copy_to_clipboard(entry.text)
-            self.app.notify(f"Copied to clipboard ({len(entry.text)} chars)", severity="information")
+            self.app.notify(
+                f"Copied to clipboard ({len(entry.text)} chars)",
+                severity="information",
+            )
             logger.info(f"Copied history entry {entry.id} to clipboard")
         except Exception as e:
             logger.error(f"Failed to copy to clipboard: {e}")
             self.app.notify("Failed to copy to clipboard", severity="error")
 
-    async def action_delete_selected(self) -> None:
+    def action_delete_selected(self) -> None:
         """Delete the selected entry after confirmation."""
         history_list = self.query_one("#history-list", ListView)
         selected_index = history_list.index
 
-        if selected_index is None or selected_index < 0 or selected_index >= len(self.entries):
+        if (
+            selected_index is None
+            or selected_index < 0
+            or selected_index >= len(self.entries)
+        ):
             self.app.notify("No entry selected", severity="warning")
             return
 
         entry = self.entries[selected_index]
 
-        # Show confirmation dialog
+        # Run async deletion in a worker
+        self.run_worker(self._delete_with_confirmation(entry), exclusive=True)
+
+    async def _delete_with_confirmation(self, entry: HistoryEntry) -> None:
+        """Show confirmation dialog and delete entry if confirmed."""
+
         confirmed = await self.app.push_screen_wait(
             DeleteConfirmDialog(entry_preview=entry.preview)
         )
@@ -218,32 +284,44 @@ class HistoryScreen(Screen):
 
         # Delete from database
         if self.history_manager.delete_entry(entry.id):
-            self.app.notify(f"Deleted entry from {entry.formatted_timestamp}", severity="information")
-            logger.info(f"Deleted history entry {entry.id}")
-            self.refresh_entries()
+            self.app.notify(
+                f"Deleted entry from {entry.formatted_timestamp}",
+                severity="information",
+            )
+            await self.refresh_entries()
         else:
             self.app.notify("Failed to delete entry", severity="error")
 
-    def refresh_entries(self) -> None:
+    async def refresh_entries(self) -> None:
         """Refresh the history list after changes."""
-        # Get updated entries
-        self.entries = self.history_manager.get_recent(limit=100)
+        # Get updated entries from database
+        new_entries = self.history_manager.get_recent(limit=100)
 
-        # Get the ListView and update it
+        # Get the ListView
         try:
             history_list = self.query_one("#history-list", ListView)
-            history_list.clear()
+        except Exception:
+            return
 
-            if self.entries:
-                for entry in self.entries:
-                    history_list.append(HistoryListItem(entry))
-            else:
-                # If no more entries, just notify
-                self.app.notify("History is now empty", severity="information")
-                self.dismiss()
+        if not new_entries:
+            # No more entries - close the screen
+            self.app.notify("History is now empty", severity="information")
+            self.dismiss()
+            return
 
-        except Exception as e:
-            logger.error(f"Error refreshing history list: {e}")
+        # Update our local cache
+        self.entries = new_entries
+
+        # Clear the list first and wait for it to complete
+        await history_list.clear()
+
+        # Add all entries back using extend (more efficient than multiple appends)
+        new_items = [HistoryListItem(entry) for entry in self.entries]
+        await history_list.extend(new_items)
+
+        # Select first item
+        if len(self.entries) > 0:
+            history_list.index = 0
 
     @on(ListView.Selected)
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
@@ -251,7 +329,11 @@ class HistoryScreen(Screen):
         history_list: ListView = event.control
         selected_index = history_list.index
 
-        if selected_index is None or selected_index < 0 or selected_index >= len(self.entries):
+        if (
+            selected_index is None
+            or selected_index < 0
+            or selected_index >= len(self.entries)
+        ):
             logger.warning(f"Invalid history index: {selected_index}")
             return
 
@@ -260,7 +342,10 @@ class HistoryScreen(Screen):
         # Copy to clipboard
         try:
             copy_to_clipboard(entry.text)
-            self.app.notify(f"Copied to clipboard ({len(entry.text)} chars)", severity="information")
+            self.app.notify(
+                f"Copied to clipboard ({len(entry.text)} chars)",
+                severity="information",
+            )
             logger.info(f"Copied history entry {entry.id} to clipboard")
         except Exception as e:
             logger.error(f"Failed to copy to clipboard: {e}")
