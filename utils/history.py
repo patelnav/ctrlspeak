@@ -6,12 +6,16 @@ Stores transcription history in SQLite database for later review.
 
 import sqlite3
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
 
 logger = logging.getLogger("ctrlspeak.history")
+
+# Schema version for migrations
+SCHEMA_VERSION = 1
 
 # Default history database location
 HISTORY_DB_PATH = Path.home() / ".ctrlspeak" / "history.db"
@@ -60,30 +64,67 @@ class HistoryManager:
     def _ensure_db_exists(self) -> None:
         """Create database and table if they don't exist."""
         try:
-            # Create directory if needed
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            # Create directory with secure permissions (user-only access)
+            db_dir = self.db_path.parent
+            db_dir.mkdir(parents=True, exist_ok=True)
+            os.chmod(db_dir, 0o700)
 
-            # Create table if not exists
+            # Create or migrate database
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS history (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        timestamp TEXT NOT NULL,
-                        text TEXT NOT NULL,
-                        model TEXT NOT NULL,
-                        duration_seconds REAL,
-                        language TEXT DEFAULT 'en'
-                    )
-                """)
-                # Create index on timestamp for faster queries
-                conn.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_timestamp ON history(timestamp DESC)
-                """)
+                # Check schema version
+                current_version = self._get_schema_version(conn)
+
+                if current_version == 0:
+                    # New database - create schema
+                    self._create_schema(conn)
+                elif current_version < SCHEMA_VERSION:
+                    # Future: run migrations here
+                    logger.warning(f"Schema version {current_version} < {SCHEMA_VERSION}. Migrations not yet implemented.")
+
                 conn.commit()
                 logger.debug(f"History database initialized at {self.db_path}")
 
         except Exception as e:
             logger.error(f"Error initializing history database: {e}", exc_info=True)
+
+    def _get_schema_version(self, conn: sqlite3.Connection) -> int:
+        """Get current schema version."""
+        try:
+            cursor = conn.execute("SELECT version FROM schema_version LIMIT 1")
+            row = cursor.fetchone()
+            return row[0] if row else 0
+        except sqlite3.OperationalError:
+            # Table doesn't exist
+            return 0
+
+    def _create_schema(self, conn: sqlite3.Connection) -> None:
+        """Create initial database schema."""
+        # Schema version tracking
+        conn.execute("""
+            CREATE TABLE schema_version (
+                version INTEGER NOT NULL
+            )
+        """)
+        conn.execute("INSERT INTO schema_version (version) VALUES (?)", (SCHEMA_VERSION,))
+
+        # History table
+        conn.execute("""
+            CREATE TABLE history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                text TEXT NOT NULL,
+                model TEXT NOT NULL,
+                duration_seconds REAL,
+                language TEXT DEFAULT 'en'
+            )
+        """)
+
+        # Index for performance
+        conn.execute("""
+            CREATE INDEX idx_timestamp ON history(timestamp DESC)
+        """)
+
+        logger.info(f"Created history database schema version {SCHEMA_VERSION}")
 
     def add_entry(
         self,
@@ -287,9 +328,18 @@ class HistoryManager:
 _history_manager: Optional[HistoryManager] = None
 
 
-def get_history_manager() -> HistoryManager:
-    """Get or create the global history manager instance."""
+def get_history_manager(db_path: Optional[Path] = None) -> HistoryManager:
+    """
+    Get or create the global history manager instance.
+
+    Args:
+        db_path: Optional custom database path. If provided on first call,
+                 sets the path for the singleton instance.
+
+    Returns:
+        HistoryManager instance
+    """
     global _history_manager
     if _history_manager is None:
-        _history_manager = HistoryManager()
+        _history_manager = HistoryManager(db_path=db_path)
     return _history_manager
