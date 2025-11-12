@@ -31,6 +31,11 @@ def parse_args_only():
                         help="Path to an audio file to transcribe (for testing).")
     parser.add_argument("--check-compatibility", action="store_true",
                         help="Check compatibility of installed models and exit.")
+    parser.add_argument("--no-history", action="store_true",
+                        help="Disable transcription history saving.")
+    parser.add_argument("--history-db", type=str,
+                        default=None,
+                        help="Custom path for history database (default: ~/.ctrlspeak/history.db)")
 
     # Check if -h or --help is present
     if '-h' in sys.argv or '--help' in sys.argv:
