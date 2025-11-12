@@ -59,17 +59,20 @@ def on_activate():
             state.console.print("\n[bold cyan]Transcription:[/bold cyan]")
             state.console.print(final_text)
 
-            # Save to history
-            try:
-                history = get_history_manager()
-                history.add_entry(
-                    text=final_text,
-                    model=state.model_type,
-                    duration_seconds=duration_seconds,
-                    language=state.source_lang
-                )
-            except Exception as e:
-                logger.error(f"Failed to save to history: {e}", exc_info=True)
+            # Save to history (if enabled)
+            if state.history_enabled:
+                try:
+                    history = get_history_manager()
+                    if state.history_db_path:
+                        history = get_history_manager(state.history_db_path)
+                    history.add_entry(
+                        text=final_text,
+                        model=state.model_type,
+                        duration_seconds=duration_seconds,
+                        language=state.source_lang
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to save to history: {e}", exc_info=True)
         else:
             state.console.print("[yellow]No transcription result[/yellow]")
 
