@@ -1,13 +1,20 @@
 
 import logging
+import time
 import state
 from utils.clipboard import copy_to_clipboard, paste_from_clipboard
 from utils.player import play_start_beep, play_stop_beep
+from utils.history import get_history_manager
 
 logger = logging.getLogger("ctrlspeak")
 
+# Track recording start time for duration calculation
+_recording_start_time = None
+
 def on_activate():
     """Handle global hotkey activation"""
+    global _recording_start_time
+
     if not state.audio_manager.is_collecting:
         # Check if model is being swapped
         if hasattr(state, 'app_state_ref') and state.app_state_ref:
@@ -31,6 +38,7 @@ def on_activate():
         logger.debug("Playing start beep...")
         play_start_beep()
         logger.debug("Calling audio_manager.start_recording()...")
+        _recording_start_time = time.time()
         state.audio_manager.start_recording()
     else:
         logger.info("Stop activated. Stopping audio recording...")
@@ -43,12 +51,29 @@ def on_activate():
         
         final_text = " ".join(state.transcribed_chunks).strip()
         if final_text:
+            # Calculate recording duration
+            duration_seconds = 0.0
+            if _recording_start_time:
+                duration_seconds = time.time() - _recording_start_time
+
             logger.info(f"Final text (len {len(final_text)} chars): {final_text[:100]}...")
             copy_to_clipboard(final_text)
             paste_from_clipboard()
-            
+
             state.console.print("\n[bold cyan]Transcription:[/bold cyan]")
             state.console.print(final_text)
+
+            # Save to history
+            try:
+                history = get_history_manager()
+                history.add_entry(
+                    text=final_text,
+                    model=state.model_type,
+                    duration_seconds=duration_seconds,
+                    language=state.source_lang
+                )
+            except Exception as e:
+                logger.error(f"Failed to save to history: {e}", exc_info=True)
         else:
             state.console.print("[yellow]No transcription result[/yellow]")
 

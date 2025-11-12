@@ -26,6 +26,7 @@ from .screens.help import HelpScreen
 from .screens.model_selection import ModelSelectionScreen
 from .screens.log_viewer import LogViewerScreen
 from .screens.model_loading import ModelLoadingScreen
+from .screens.history import HistoryScreen
 
 logger = logging.getLogger("ctrlspeak.ui")
 
@@ -96,6 +97,7 @@ class CtrlSpeakApp(App):
     BINDINGS = [
         Binding("d", "show_devices", "Devices", show=True),
         Binding("m", "show_models", "Models", show=True),
+        Binding("r", "show_history", "History", show=True),
         Binding("l", "show_logs", "Logs", show=True),
         Binding("h", "show_help", "Help", show=True),
         Binding("q", "quit", "Quit", show=True),
@@ -186,6 +188,11 @@ class CtrlSpeakApp(App):
         """Show model selection screen."""
         logger.info("Model selection requested")
         await self.push_screen(ModelSelectionScreen(app_state=self.app_state))
+
+    async def action_show_history(self) -> None:
+        """Show history screen."""
+        logger.info("History screen requested")
+        await self.push_screen(HistoryScreen(app_state=self.app_state))
 
     async def action_show_logs(self) -> None:
         """Show log viewer screen."""
