@@ -13,6 +13,7 @@ from textual.containers import Container, Horizontal
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Label, ListItem, ListView
 
+import state
 from utils.clipboard import copy_to_clipboard
 from utils.history import HistoryEntry, get_history_manager
 
@@ -182,7 +183,7 @@ class HistoryScreen(Screen):
         super().__init__(**kwargs)
         self.app_state = app_state
         self.entries = []
-        self.history_manager = get_history_manager()
+        self.history_manager = get_history_manager(state.history_db_path)
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""

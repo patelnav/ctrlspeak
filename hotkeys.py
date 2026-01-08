@@ -119,9 +119,7 @@ def on_activate():
             # Save to history (if enabled)
             if state.history_enabled:
                 try:
-                    history = get_history_manager()
-                    if state.history_db_path:
-                        history = get_history_manager(state.history_db_path)
+                    history = get_history_manager(state.history_db_path)
                     history.add_entry(
                         text=final_text,
                         model=state.model_type,
