@@ -88,9 +88,10 @@ pip install -r requirements-whisper.txt
 
 ## 🧰 Entry Points
 
-- `ctrlspeak.py`: The full-featured star of the show  
-- `live_transcribe.py`: Continuous transcription for testing vibes  
-- `test_transcription.py`: Debug or benchmark with ease  
+- `ctrlspeak.py`: The full-featured star of the show
+- `live_transcribe.py`: Continuous transcription for testing vibes
+- `test_transcription.py`: Debug or benchmark with ease
+- `test_parallel_models.py`: Compare Nemotron streaming vs Parakeet side-by-side  
 
 
 ### Workflow
@@ -116,6 +117,7 @@ ctrlSPEAK uses open-source speech recognition models:
 - **Canary**: NVIDIA NeMo's `nvidia/canary-1b-flash` multilingual model (En, De, Fr, Es) with punctuation, but can be slower. Requires `requirements-nvidia.txt`.
 - **Canary (180M)**: NVIDIA NeMo's `nvidia/canary-180m-flash` multilingual model, smaller and less accurate. Requires `requirements-nvidia.txt`.
 - **Whisper** (optional): OpenAI's `openai/whisper-large-v3` model. A fast, accurate, and powerful model that includes excellent punctuation and capitalization. Requires `requirements-whisper.txt`.
+- **Nemotron (Streaming)** [Experimental]: NVIDIA's `nvidia/nemotron-speech-streaming-en-0.6b` streaming model with real-time transcription. Text appears as you speak. Requires `requirements-nvidia.txt`.
 
 **Note:** The `nvidia/parakeet-tdt-1.1b` model is also available for testing, but it is not recommended for general use as it lacks punctuation and is slower than the `0.6b` model. Requires `requirements-nvidia.txt`.
 
@@ -145,6 +147,7 @@ You can select a model using the `--model` flag. You can use either the full mod
 *   `canary`: NVIDIA's Canary 1B Flash model.
 *   `canary-180m`: NVIDIA's Canary 180M Flash model.
 *   `whisper`: OpenAI's Whisper v3 model.
+*   `nemotron`: NVIDIA's Nemotron streaming model. [Experimental]
 
 **Full Model URL:**
 
@@ -163,7 +166,8 @@ ctrlspeak --model canary         # Multilingual with punctuation
 ctrlspeak --model canary-180m    # The smaller Canary model
 ctrlspeak --model canary-v2
 ctrlspeak --model whisper        # OpenAI's model
-ctrlspeak --model parakeet-mlx # MLX-accelerated model
+ctrlspeak --model parakeet-mlx   # MLX-accelerated model
+ctrlspeak --model nemotron       # Streaming (experimental)
 
 # Using manual installation
 python ctrlspeak.py --model parakeet
@@ -172,6 +176,7 @@ python ctrlspeak.py --model canary-180m
 python ctrlspeak.py --model canary-v2
 python ctrlspeak.py --model whisper
 python ctrlspeak.py --model parakeet-mlx
+python ctrlspeak.py --model nemotron
 ```
 
 For debugging, you can use the `--debug` flag:
@@ -188,6 +193,7 @@ ctrlspeak --debug
 4. **Canary (NVIDIA)** - `nvidia/canary-180m-flash`
 5. **Canary (NVIDIA)** - `nvidia/canary-1b-v2`
 6. **Whisper (OpenAI)** - `openai/whisper-large-v3`
+7. **Nemotron (NVIDIA)** - `nvidia/nemotron-speech-streaming-en-0.6b` [Experimental, Streaming]
 
 ## Performance Comparison
 
@@ -204,6 +210,15 @@ ctrlspeak --debug
 *Testing performed on a MacBook Pro (M2 Max) with a 7-second audio file (`test.wav`). Your results may vary.*
 
 **Note:** Whisper model uses translate mode to enable proper punctuation and capitalization for English transcription.
+
+### Streaming vs Batch Tradeoffs
+
+The **Nemotron** model uses real-time streaming transcription where text appears as you speak. This provides instant feedback but has accuracy tradeoffs compared to batch models like Parakeet:
+
+- **Streaming (Nemotron)**: Text appears incrementally during speech. Lower accuracy due to limited context - may miss or misinterpret phrases.
+- **Batch (Parakeet, etc.)**: Transcription happens after recording stops. Higher accuracy because the model has the full audio context.
+
+For most users, **Parakeet MLX** (default) provides the best balance of speed and accuracy.
 
 ## Permissions
 

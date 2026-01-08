@@ -18,6 +18,7 @@ from state import (
     NVIDIA_CANARY_1B_FLASH,
     NVIDIA_CANARY_180M,
     NVIDIA_CANARY_V2,
+    NVIDIA_NEMOTRON_STREAMING,
     OPENAI_WHISPER_V3,
 )
 
@@ -34,6 +35,7 @@ class ModelFactory:
         "canary": NVIDIA_CANARY_1B_FLASH,
         "canary-180m": NVIDIA_CANARY_180M,
         "canary-v2": NVIDIA_CANARY_V2,
+        "nemotron": NVIDIA_NEMOTRON_STREAMING,
         "whisper": OPENAI_WHISPER_V3
     }
 
@@ -93,7 +95,20 @@ class ModelFactory:
         # Include verbose parameter in kwargs
         kwargs['verbose'] = verbose
         
-        if "canary" in model_type:
+        if "nemotron" in model_type:
+            # Check if nemo is available for Nemotron models
+            try:
+                import nemo.collections.asr as nemo_asr
+            except ImportError:
+                raise ImportError(
+                    "Nemotron models require nemo-toolkit. Please install with:\n"
+                    "brew reinstall ctrlspeak --with-nvidia"
+                )
+
+            from models.nemotron import NemotronModel
+            logger.debug(f"Initializing NemotronModel with {model_type}")
+            return NemotronModel(model_name=model_type, **kwargs)
+        elif "canary" in model_type:
             # Check if nemo is available for Canary models
             try:
                 import nemo.collections.asr as nemo_asr
@@ -102,7 +117,7 @@ class ModelFactory:
                     "Canary models require nemo-toolkit. Please install with:\n"
                     "brew reinstall ctrlspeak --with-nvidia"
                 )
-            
+
             from models.canary import CanaryModel
             logger.debug(f"Initializing CanaryModel with {model_type}")
             return CanaryModel(model_name=model_type, **kwargs)

@@ -77,6 +77,68 @@ class BaseSTTModel(ABC):
             "Child classes must implement either transcribe_batch or override transcribe"
         )
     
+    # =========================================================================
+    # Streaming Interface (for cache-aware streaming models like Nemotron)
+    # =========================================================================
+
+    @property
+    def supports_streaming(self) -> bool:
+        """Whether this model supports streaming transcription.
+
+        Streaming models can process audio incrementally with maintained
+        cache state, providing lower latency than batch transcription.
+        """
+        return False
+
+    def init_streaming(self) -> None:
+        """Initialize streaming state. Called at recording start.
+
+        Sets up encoder cache and any other state needed for
+        incremental processing.
+
+        Raises:
+            NotImplementedError: If model doesn't support streaming.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support streaming transcription"
+        )
+
+    def stream_chunk(self, audio_samples: "np.ndarray") -> str:
+        """Process a chunk of audio and return incremental transcription.
+
+        Args:
+            audio_samples: Audio samples as float32 numpy array (16kHz mono).
+
+        Returns:
+            Transcribed text from this chunk (may be empty if no speech detected).
+
+        Raises:
+            NotImplementedError: If model doesn't support streaming.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support streaming transcription"
+        )
+
+    def finalize_streaming(self) -> str:
+        """Finalize streaming session and return any remaining transcription.
+
+        Called at recording stop. Processes any buffered audio and
+        cleans up streaming state.
+
+        Returns:
+            Any remaining transcribed text.
+
+        Raises:
+            NotImplementedError: If model doesn't support streaming.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support streaming transcription"
+        )
+
+    # =========================================================================
+    # Text Processing
+    # =========================================================================
+
     def _clean_text(self, text: Any) -> str:
         """Internal method to clean text output.
         

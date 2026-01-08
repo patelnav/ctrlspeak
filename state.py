@@ -17,6 +17,7 @@ NVIDIA_PARAKEET_V2 = "nvidia/parakeet-tdt-0.6b-v2"
 NVIDIA_CANARY_1B_FLASH = "nvidia/canary-1b-flash"
 NVIDIA_CANARY_180M = "nvidia/canary-180m-flash"
 NVIDIA_CANARY_V2 = "nvidia/canary-1b-v2"
+NVIDIA_NEMOTRON_STREAMING = "nvidia/nemotron-speech-streaming-en-0.6b"
 OPENAI_WHISPER_V3 = "openai/whisper-large-v3"
 
 # Set of all known/supported models
@@ -28,6 +29,7 @@ KNOWN_MODELS = {
     NVIDIA_CANARY_1B_FLASH,
     NVIDIA_CANARY_180M,
     NVIDIA_CANARY_V2,
+    NVIDIA_NEMOTRON_STREAMING,
     OPENAI_WHISPER_V3,
 }
 

@@ -27,8 +27,13 @@ SAMPLE_RATE = 16000  # NeMo expects 16kHz
 CHANNELS = 1
 
 class AudioManager:
-    """Class to manage audio recording and state"""
-    
+    """Class to manage audio recording and state.
+
+    Supports two modes:
+    1. Queue mode (default): RMS-based silence detection, queues segments for batch transcription
+    2. Streaming mode: Fixed-interval chunks, calls callback for real-time transcription
+    """
+
     def __init__(self, transcription_queue, debug_mode=False, app_state=None):
         """Initialize the audio manager"""
         self.is_running = True
@@ -57,6 +62,12 @@ class AudioManager:
         self.current_silence_s = 0.0
         self.is_potentially_speaking = False # Track if we heard sound recently
         self.last_rms = 0.0 # Store last RMS value for app_state updates
+
+        # Streaming mode state
+        self._streaming_mode = False
+        self._streaming_callback = None  # Function to call with each chunk
+        self._streaming_chunk_size_samples = 0  # Samples per chunk
+        self._streaming_buffer = []  # Buffer for accumulating streaming chunks
     
     def set_debug_mode(self, debug_mode):
         """Set debug mode"""
@@ -128,17 +139,29 @@ class AudioManager:
         self.is_running = value
     
     def audio_callback(self, indata, frames, time_info, status):
-        """Callback function to process audio input (Phase 3: RMS Segmentation)"""
+        """Callback function to process audio input.
+
+        Routes to either:
+        - Streaming mode: Fixed-interval chunks for real-time transcription
+        - Queue mode: RMS-based silence detection for batch transcription
+        """
         if not self.is_collecting:
             # Optimization: Don't process if not collecting
-            return 
-            
+            return
+
         if status:
             logger.warning(f"Audio callback status: {status}")
             # Potentially return or handle specific statuses
 
         # Always make a copy
         chunk = indata.copy()
+
+        # Route to appropriate mode
+        if self._streaming_mode:
+            self._streaming_audio_callback(chunk, frames)
+            return
+
+        # Otherwise, use the original RMS-based segmentation logic
         current_chunk_duration_s = float(frames) / SAMPLE_RATE
         
         # Calculate RMS
@@ -266,7 +289,164 @@ class AudioManager:
 
         # Clear buffer and reset state after stopping
         self.reset_collected_audio()
-    
+
+    # =========================================================================
+    # Streaming Mode Methods
+    # =========================================================================
+
+    def start_streaming(self, chunk_size_ms: int = 560, on_chunk_callback=None):
+        """Start recording in streaming mode with fixed-interval chunks.
+
+        In streaming mode, audio is collected in fixed-size chunks (not based on
+        silence detection) and passed to the callback for real-time transcription.
+
+        Args:
+            chunk_size_ms: Size of each chunk in milliseconds (default 560ms).
+                          Valid values: 80, 160, 560, 1120 (aligned with model frames)
+            on_chunk_callback: Function to call with each chunk.
+                              Signature: callback(audio_samples: np.ndarray) -> str
+                              The callback receives float32 audio at 16kHz.
+        """
+        if self.is_collecting:
+            logger.warning("Already collecting audio. Stop first before starting streaming.")
+            return
+
+        logger.info(f"Starting streaming mode (chunk size: {chunk_size_ms}ms)")
+
+        # Configure streaming
+        self._streaming_mode = True
+        self._streaming_callback = on_chunk_callback
+        self._streaming_chunk_size_samples = int(SAMPLE_RATE * chunk_size_ms / 1000)
+        self._streaming_buffer = []
+
+        # Reset standard buffer and state
+        self.reset_collected_audio()
+
+        # Start collection (reuses existing live display logic)
+        self.set_is_collecting(True)
+
+        self.console.line()
+        self.console.print(Panel.fit(
+            "[bold green]Started streaming recording...[/bold green]\n"
+            f"[dim]Chunk size: {chunk_size_ms}ms | Tap Ctrl key 3 times quickly to stop[/dim]",
+            border_style="green"
+        ))
+
+    def stop_streaming(self) -> None:
+        """Stop streaming recording and process any remaining audio.
+
+        Returns any text from processing the final buffer.
+        """
+        if not self.is_collecting:
+            logger.warning("stop_streaming called but not collecting.")
+            return
+
+        if not self._streaming_mode:
+            logger.warning("stop_streaming called but not in streaming mode. Use stop_recording() instead.")
+            self.stop_recording()
+            return
+
+        logger.info("Stopping streaming recording...")
+        self.set_is_collecting(False)
+        self.console.line()
+
+        # Process any remaining audio in the streaming buffer
+        if self._streaming_buffer and self._streaming_callback:
+            remaining_samples = sum(len(c) for c in self._streaming_buffer)
+            if remaining_samples > 0:
+                # Concatenate remaining buffer
+                remaining_audio = np.concatenate(self._streaming_buffer).flatten()
+                duration_ms = len(remaining_audio) / SAMPLE_RATE * 1000
+                logger.info(f"[AUDIO_STOP] Final buffer: {len(remaining_audio)} samples ({duration_ms:.0f}ms)")
+                try:
+                    logger.debug(f"[AUDIO_STOP] Calling streaming callback with final buffer (is_final=True)...")
+                    self._streaming_callback(remaining_audio, is_final=True)
+                    logger.debug(f"[AUDIO_STOP] Final streaming callback completed")
+                except Exception as e:
+                    logger.error(f"Error in final streaming callback: {e}")
+            else:
+                logger.info("[AUDIO_STOP] No remaining samples in buffer")
+        else:
+            logger.info(f"[AUDIO_STOP] No final buffer to process (buffer={bool(self._streaming_buffer)}, callback={bool(self._streaming_callback)})")
+
+        # Reset streaming state
+        self._streaming_mode = False
+        self._streaming_callback = None
+        self._streaming_buffer = []
+        self._streaming_chunk_size_samples = 0
+
+        # Clear standard buffer and state
+        self.reset_collected_audio()
+
+    def _streaming_audio_callback(self, chunk: np.ndarray, frames: int):
+        """Internal callback for streaming mode audio processing.
+
+        Accumulates audio until chunk_size is reached, then calls the streaming callback.
+
+        Args:
+            chunk: Audio data from sounddevice (shape: [frames, channels])
+            frames: Number of frames in chunk
+        """
+        # Flatten if needed (sounddevice gives [frames, channels])
+        if chunk.ndim > 1:
+            chunk = chunk.flatten()
+
+        # Add to streaming buffer
+        self._streaming_buffer.append(chunk)
+
+        # Calculate total samples in buffer
+        total_samples = sum(len(c) for c in self._streaming_buffer)
+
+        # Calculate RMS for UI feedback
+        try:
+            rms = np.sqrt(np.mean(chunk**2))
+            self.last_rms = rms
+            if self.app_state:
+                self.app_state.current_rms = rms
+        except Exception as e:
+            logger.debug(f"Error calculating RMS in streaming mode: {e}")
+
+        # Check if we have enough samples for a chunk
+        if total_samples >= self._streaming_chunk_size_samples:
+            # Concatenate buffer
+            audio_data = np.concatenate(self._streaming_buffer).flatten()
+
+            # Take exactly chunk_size samples
+            chunk_samples = audio_data[:self._streaming_chunk_size_samples]
+
+            # Keep remainder in buffer
+            remainder = audio_data[self._streaming_chunk_size_samples:]
+            if len(remainder) > 0:
+                self._streaming_buffer = [remainder]
+            else:
+                self._streaming_buffer = []
+
+            # Ensure float32 in range [-1, 1]
+            if chunk_samples.dtype != np.float32:
+                chunk_samples = chunk_samples.astype(np.float32)
+
+            # Call the streaming callback
+            if self._streaming_callback:
+                try:
+                    duration_ms = len(chunk_samples) / SAMPLE_RATE * 1000
+                    logger.debug(f"[AUDIO_CHUNK] Sending chunk: {len(chunk_samples)} samples ({duration_ms:.0f}ms)")
+                    self._streaming_callback(chunk_samples, is_final=False)
+                except Exception as e:
+                    logger.error(f"Error in streaming callback: {e}")
+
+        # Update live display
+        if self.live_display and int(timer_module.time() * 4) % 2 == 0:
+            try:
+                self.live_display.update(self._render_recording_status())
+            except Exception as e:
+                logger.error(f"Error updating live display: {e}", exc_info=False)
+                self.live_display = None
+
+    @property
+    def is_streaming(self) -> bool:
+        """Check if currently in streaming mode."""
+        return self._streaming_mode and self.is_collecting
+
     def start_input_stream(self):
         """Start the audio input stream using the instance method as callback"""
         logger.info("AudioManager: Starting audio input stream...")

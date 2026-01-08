@@ -2,9 +2,10 @@
 Centralized application state for ctrlSPEAK Textual UI.
 """
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
-from textual.reactive import Reactive
+from dataclasses import dataclass
+from typing import List, Optional
+
+from models.factory import ModelFactory
 
 
 @dataclass
@@ -45,16 +46,7 @@ class AppState:
         self.loaded_model: str = "parakeet"    # Actually loaded model (current runtime state)
         self.is_loading_model: bool = False    # Whether model is currently being loaded
         self.model_load_progress: str = ""     # Progress message during model load
-        self.available_models: List[str] = [
-            "parakeet-v3-mlx",
-            "parakeet-v3",
-            "parakeet-v2-mlx",
-            "parakeet-v2",
-            "canary",
-            "canary-180m",
-            "canary-v2",
-            "whisper"
-        ]
+        self.available_models: List[str] = list(ModelFactory._DEFAULT_ALIASES.keys())
         self.source_lang: str = "en"
         self.target_lang: str = "en"
 
