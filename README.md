@@ -303,6 +303,9 @@ You'll be prompted to grant these permissions on first run.
 
 ## Credits
 
+### Contributors
+- [@swanhtet1992](https://github.com/swanhtet1992) - Transcription history feature
+
 ### Sound Effects
 - Start sound: ["Notification Pluck On"](https://pixabay.com/sound-effects/notification-pluck-on-269288/) from Pixabay
 - Stop sound: ["Notification Pluck Off"](https://pixabay.com/sound-effects/notification-pluck-off-269290/) from Pixabay
