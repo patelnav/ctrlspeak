@@ -49,3 +49,10 @@ device = None
 
 source_lang = "en"
 target_lang = "en"
+
+# Recording timing
+recording_start_time = None
+
+# History configuration
+history_enabled = True
+history_db_path = None

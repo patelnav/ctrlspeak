@@ -81,6 +81,12 @@ def run_app(args):
         state.source_lang = args.source_lang
         state.target_lang = args.target_lang
 
+        # History configuration
+        state.history_enabled = not args.no_history
+        if args.history_db:
+            from pathlib import Path
+            state.history_db_path = Path(args.history_db)
+
         state.model_type = ModelFactory.resolve_model_alias(model_type_arg)
 
         state.device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")

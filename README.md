@@ -15,12 +15,13 @@
 
 ## ✨ Features
 
-- 🖥️ **Minimal Interface**: Runs quietly in the background via the command line  
-- ⚡ **Triple-Tap Magic**: Start/stop recording with a quick `Ctrl` triple-tap  
-- 📋 **Auto-Paste**: Text lands right where you need it, no extra clicks  
-- 🔊 **Audio Cues**: Hear when recording begins and ends  
-- 🍎 **Mac Optimized**: Harnesses Apple Silicon's MPS for blazing performance  
-- 🌟 **Top-Tier Models**: Powered by NVIDIA NeMo and OpenAI Whisper  
+- 🖥️ **Minimal Interface**: Runs quietly in the background via the command line
+- ⚡ **Triple-Tap Magic**: Start/stop recording with a quick `Ctrl` triple-tap
+- 📋 **Auto-Paste**: Text lands right where you need it, no extra clicks
+- 🔊 **Audio Cues**: Hear when recording begins and ends
+- 🍎 **Mac Optimized**: Harnesses Apple Silicon's MPS for blazing performance
+- 🌟 **Top-Tier Models**: Powered by NVIDIA NeMo and OpenAI Whisper
+- 📜 **History Browser**: Review, search, and copy past transcriptions (press `r` in the UI)  
 
 ## 🛠️ Get Started
 
@@ -109,6 +110,17 @@ pip install -r requirements-whisper.txt
 4. Triple-tap Ctrl again to stop recording
 5. The transcribed text will be automatically pasted at your cursor position
 
+### UI Controls
+
+Once running, you can use these keyboard shortcuts in the terminal UI:
+
+- `r` - View transcription history
+- `m` - Switch speech recognition models
+- `d` - Change audio input device
+- `l` - View logs
+- `h` - Show help
+- `q` - Quit
+
 ## Models
 
 ctrlSPEAK uses open-source speech recognition models:
@@ -179,10 +191,65 @@ python ctrlspeak.py --model parakeet-mlx
 python ctrlspeak.py --model nemotron
 ```
 
-For debugging, you can use the `--debug` flag:
+## Transcription History
+
+ctrlSPEAK automatically saves your transcriptions locally for later review.
+
+### History Browser
+
+Access the interactive history browser by pressing `r` in the terminal UI:
+
+- **View past transcriptions** - Browse all saved transcriptions with timestamps
+- **Copy to clipboard** - Press `Enter` or `c` to copy any previous transcription
+- **Delete entries** - Press `Delete` or `d` to remove unwanted entries
+- **Navigate** - Use arrow keys to browse through your history
+- **See statistics** - View total entries, word count, and recording time
+
+### Data Storage
+
+History is stored locally in a SQLite database:
+
+- **Location**: `~/.ctrlspeak/history.db`
+- **What's stored**: Timestamp, transcription text, model used, duration, language
+- **Permissions**: File is created with user-only access (700)
+
+### Privacy Controls
+
+You have full control over your transcription history:
 
 ```bash
-ctrlspeak --debug
+# Disable history saving
+ctrlspeak --no-history
+
+# Use custom database location
+ctrlspeak --history-db ~/my-custom-path/history.db
+
+# Delete all history data
+rm ~/.ctrlspeak/history.db
+```
+
+## Command Line Options
+
+```bash
+ctrlspeak [OPTIONS]
+
+Options:
+  --model MODEL           Select speech recognition model (default: parakeet)
+  --list-models           Show all available models
+  --no-history            Disable transcription history saving
+  --history-db PATH       Custom path for history database
+  --source-lang LANG      Source language code (default: en)
+  --target-lang LANG      Target language code (default: en)
+  --debug                 Enable debug logging
+  --check-only            Verify configuration without running
+  --check-compatibility   Check system compatibility
+
+Examples:
+  ctrlspeak                                    # Run with defaults
+  ctrlspeak --model whisper                    # Use Whisper model
+  ctrlspeak --no-history                       # Disable history
+  ctrlspeak --history-db ~/backup/history.db  # Custom DB location
+  ctrlspeak --debug                            # Enable debug mode
 ```
 
 ## Models Tested
