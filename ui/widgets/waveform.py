@@ -16,12 +16,12 @@ logger = logging.getLogger("ctrlspeak.ui.waveform")
 
 class WaveformDisplay(Static):
     """
-    Displays a real-time waveform visualization based on RMS levels.
+    Displays a real-time waveform visualization based on Silero VAD.
 
     Shows:
-    - Bar graph visualization of audio levels
+    - Bar graph visualization of speech probability
     - Color coding: green (speech detected), gray (silence)
-    - Numeric RMS value
+    - VAD probability percentage and RMS value
     """
 
     def __init__(self, app_state: AppState, **kwargs):
@@ -60,7 +60,7 @@ class WaveformDisplay(Static):
     def render(self) -> Text:
         """Render the waveform display."""
         rms = self.app_state.current_rms
-        threshold = self.app_state.rms_threshold
+        vad_prob = self.app_state.current_vad_prob
         is_recording = self.app_state.is_recording
 
         # Create the display text
@@ -77,35 +77,25 @@ class WaveformDisplay(Static):
             text.append("Not recording", style="dim")
             return text
 
-        # Calculate bar length based on RMS (scale it for visibility)
-        # Linear scale: typical RMS values range from 0.0001 (very quiet) to 0.1+ (loud)
-        # We'll scale to show good range with 0.05 as roughly "full"
-        max_rms_for_scale = 0.05  # Adjust this to change sensitivity
-
-        # Calculate percentage (0-100)
-        if rms > 0:
-            scaled_rms = min(100, int((rms / max_rms_for_scale) * 100))
-        else:
-            scaled_rms = 0
-
-        # Convert percentage to bar length
-        bar_length = int((scaled_rms / 100) * self.bar_width)
+        # Calculate bar length based on VAD probability (0-1)
+        bar_length = int(vad_prob * self.bar_width)
         bar_length = max(0, min(bar_length, self.bar_width))
 
-        # Determine if speech is detected
-        is_speech = rms >= threshold
+        # Determine if speech is detected (VAD threshold is 0.5)
+        is_speech = vad_prob >= 0.5
 
         # Color coding
         bar_style = "bold green" if is_speech else "dim white"
         empty_style = "dim"
 
         # Build the bar
-        text.append("Level: ", style="bold cyan")
+        text.append("VAD:   ", style="bold cyan")
         text.append("█" * bar_length, style=bar_style)
         text.append("░" * (self.bar_width - bar_length), style=empty_style)
 
-        # Show numeric RMS value
-        text.append(f" RMS: {rms:.6f}", style="dim")
+        # Show VAD probability and RMS
+        text.append(f" {vad_prob:.0%}", style="bold" if is_speech else "dim")
+        text.append(f" (RMS: {rms:.4f})", style="dim")
 
         # Show speech detection status
         if is_speech:

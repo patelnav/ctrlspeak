@@ -19,7 +19,7 @@ class SettingsScreen(Screen):
     Settings screen for adjusting ctrlSPEAK parameters.
 
     Allows tuning:
-    - RMS threshold for speech detection
+    - VAD threshold for speech detection
     - Silence duration for segmentation
     - Minimum chunk duration
     """
@@ -78,13 +78,13 @@ class SettingsScreen(Screen):
         with Container(id="settings-container"):
             yield Label("Settings", classes="screen-title")
 
-            # RMS Threshold
+            # VAD Threshold
             with Horizontal(classes="setting-row"):
-                yield Label("RMS Threshold:", classes="setting-label")
-                yield Label(f"{self.app_state.rms_threshold:.4f}", classes="setting-value", id="rms-value")
+                yield Label("VAD Threshold:", classes="setting-label")
+                yield Label(f"{self.app_state.vad_threshold:.0%}", classes="setting-value", id="vad-value")
 
             yield Label(
-                "Speech detection threshold (0.0001 - 0.1)",
+                "Silero VAD speech probability threshold (0-100%)",
                 classes="setting-help"
             )
 
@@ -138,7 +138,7 @@ class SettingsScreen(Screen):
         """Refresh displayed values from app state."""
         try:
             if self.app_state:
-                self.query_one("#rms-value", Label).update(f"{self.app_state.rms_threshold:.4f}")
+                self.query_one("#vad-value", Label).update(f"{self.app_state.vad_threshold:.0%}")
                 self.query_one("#silence-value", Label).update(f"{self.app_state.silence_duration_s:.1f}s")
                 self.query_one("#chunk-value", Label).update(f"{self.app_state.min_chunk_duration_s:.1f}s")
                 self.query_one("#model-value", Label).update(f"{self.app_state.selected_model}")

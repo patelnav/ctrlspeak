@@ -40,7 +40,7 @@ Triple-tap Ctrl → on_activate() → start_recording()
                                        ↓
                           AudioManager captures audio
                                        ↓
-                    RMS segmentation detects silence gaps
+                  Silero VAD detects speech/silence segments
                                        ↓
                    Audio chunks queued to transcription_queue
                                        ↓
@@ -57,7 +57,7 @@ Triple-tap Ctrl → stop_recording() → join queue → paste to clipboard
 
 **Hotkey System (`hotkeys.py` + `utils/keyboard_shortcuts.py`)**: Uses pynput for global Ctrl key detection. Triple-tap within 0.5s triggers `on_activate()`. Manages recording start/stop, queue draining, and clipboard paste.
 
-**Audio Pipeline (`utils/audio.py`)**: `AudioManager` class handles recording at 16kHz. RMS-based segmentation cuts on 1.0s silence. Min chunk 0.5s. Segments queued for transcription.
+**Audio Pipeline (`utils/audio.py`)**: `AudioManager` class handles recording at 16kHz. Silero VAD detects speech vs silence (loaded at startup via torch.hub). Segments on 1.0s sustained silence. Min chunk 0.5s. Segments queued for transcription.
 
 **Transcription Worker (`transcription.py`)**: Daemon thread pulls from queue, writes temp WAV, calls `model.transcribe_batch()`, appends text to results list. Terminates on `None` sentinel.
 

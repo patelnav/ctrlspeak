@@ -30,6 +30,7 @@ class AppState:
         self.audio_duration_s: float = 0.0
         self.buffer_size_samples: int = 0
         self.current_rms: float = 0.0
+        self.current_vad_prob: float = 0.0  # Silero VAD speech probability
         self.recording_start_time: Optional[float] = None
         self.current_silence_s: float = 0.0
 
@@ -39,7 +40,7 @@ class AppState:
         self.available_devices: List[DeviceInfo] = []
 
         # Settings state
-        self.rms_threshold: float = 0.01
+        self.vad_threshold: float = 0.5  # Silero VAD speech probability threshold
         self.silence_duration_s: float = 1.0
         self.min_chunk_duration_s: float = 0.5
         self.selected_model: str = "parakeet"  # Model preference (saved for next launch)
@@ -66,13 +67,14 @@ class AppState:
         self.audio_duration_s = 0.0
         self.buffer_size_samples = 0
         self.current_rms = 0.0
+        self.current_vad_prob = 0.0
         self.recording_start_time = None
 
     def update_from_audio_manager(self, audio_manager):
         """Update state from AudioManager instance."""
         self.is_recording = audio_manager.is_collecting
         self.buffer_size_samples = len(audio_manager.audio_buffer) if audio_manager.audio_buffer else 0
-        self.rms_threshold = audio_manager.RMS_THRESHOLD
+        self.vad_threshold = audio_manager.VAD_THRESHOLD
         self.silence_duration_s = audio_manager.SILENCE_DURATION_S
         self.min_chunk_duration_s = audio_manager.MIN_CHUNK_DURATION_S
 

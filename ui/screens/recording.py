@@ -53,7 +53,7 @@ class RecordingScreen(Static):
                 classes="device-info-header"
             )
 
-            # Waveform display (RMS bars)
+            # Waveform display (VAD probability)
             yield WaveformDisplay(
                 app_state=self.app_state
             )

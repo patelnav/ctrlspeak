@@ -33,25 +33,25 @@ HELP_TEXT = """
 ## How It Works
 
 1. **Start Recording**: Triple-tap the Ctrl key quickly
-2. **Speak**: The app detects speech above the RMS threshold
+2. **Speak**: The app uses Silero VAD to detect speech
 3. **Pause**: When you pause for the configured silence duration, audio is segmented
 4. **Transcribe**: Each segment is transcribed and copied to clipboard
 5. **Stop**: Triple-tap Ctrl again to stop recording
 
 ## Audio Segmentation
 
-The app uses **RMS-based speech detection** to automatically segment your recording:
+The app uses **Silero VAD (Voice Activity Detection)** to automatically segment your recording:
 
-- **RMS Threshold**: Minimum audio level to detect speech (default: 0.01)
+- **VAD Threshold**: Speech probability threshold (default: 50%)
 - **Silence Duration**: How long to wait before segmenting (default: 1.0s)
 - **Min Chunk Duration**: Minimum length to transcribe (default: 0.5s)
 
 ## Waveform Display
 
-The waveform shows real-time audio levels:
-- **Green bars** = Speech detected (above threshold)
+The waveform shows real-time VAD probability:
+- **Green bars** = Speech detected (above 50% probability)
 - **Gray bars** = Silence (below threshold)
-- **RMS value** = Current audio level
+- **VAD %** = Current speech probability from Silero VAD
 
 ## Models
 
@@ -66,7 +66,7 @@ Use `--model <name>` to select a model at startup.
 
 ## Tips
 
-- Adjust the **RMS threshold** if speech detection is too sensitive or not sensitive enough
+- VAD automatically adapts to different speaking volumes and environments
 - Increase **silence duration** for longer pauses between sentences
 - Use a quiet environment for best results
 - Check device settings (D key) to select the right microphone

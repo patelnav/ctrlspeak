@@ -8,6 +8,7 @@ import time
 import logging
 from queue import Queue
 import soundfile as sf
+import torch
 from rich.console import Console
 import time as timer_module
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
@@ -30,7 +31,7 @@ class AudioManager:
     """Class to manage audio recording and state.
 
     Supports two modes:
-    1. Queue mode (default): RMS-based silence detection, queues segments for batch transcription
+    1. Queue mode (default): Silero VAD-based silence detection, queues segments for batch transcription
     2. Streaming mode: Fixed-interval chunks, calls callback for real-time transcription
     """
 
@@ -54,8 +55,6 @@ class AudioManager:
         self.input_device = None  # None means use default device
         self.current_stream = None  # Store active stream for hot swapping
 
-        # Phase 2: Add state for RMS detection
-        self.RMS_THRESHOLD = 0.01 # EXAMPLE VALUE - NEEDS TUNING LATER!
         # Phase 5 Tuning: Reduce silence duration based on user feedback
         self.SILENCE_DURATION_S = 1.0
         self.MIN_CHUNK_DURATION_S = 0.5 # Avoid transcribing tiny blips
@@ -68,10 +67,54 @@ class AudioManager:
         self._streaming_callback = None  # Function to call with each chunk
         self._streaming_chunk_size_samples = 0  # Samples per chunk
         self._streaming_buffer = []  # Buffer for accumulating streaming chunks
+
+        # Silero VAD state
+        self._vad_model = None
+        self._vad_buffer = []  # Buffer to accumulate 512 samples for VAD
+        self.VAD_CHUNK_SAMPLES = 512  # Silero requires exactly 512 samples at 16kHz
+        self.VAD_THRESHOLD = 0.5  # Speech probability threshold
+        self._load_vad_model()
     
     def set_debug_mode(self, debug_mode):
         """Set debug mode"""
         self.debug_mode = debug_mode
+
+    def _load_vad_model(self):
+        """Load Silero VAD model for speech detection."""
+        try:
+            logger.info("Loading Silero VAD model...")
+            self._vad_model, _ = torch.hub.load(
+                repo_or_dir='snakers4/silero-vad',
+                model='silero_vad',
+                force_reload=False,
+                onnx=False,
+                trust_repo=True
+            )
+            logger.info("Silero VAD model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load Silero VAD model: {e}")
+            logger.warning("VAD model unavailable - speech detection disabled")
+            self._vad_model = None
+
+    def _get_speech_probability(self, audio_chunk: np.ndarray) -> float:
+        """Get speech probability from Silero VAD for a 512-sample chunk.
+
+        Args:
+            audio_chunk: Audio samples (must be exactly 512 samples at 16kHz)
+
+        Returns:
+            Speech probability between 0 and 1, or -1 if VAD unavailable
+        """
+        if self._vad_model is None:
+            return -1.0
+
+        try:
+            chunk_tensor = torch.from_numpy(audio_chunk).float()
+            speech_prob = self._vad_model(chunk_tensor, SAMPLE_RATE).item()
+            return speech_prob
+        except Exception as e:
+            logger.error(f"VAD inference error: {e}")
+            return -1.0
 
     def set_input_device(self, device_id):
         """Set the audio input device by ID."""
@@ -119,12 +162,16 @@ class AudioManager:
         return status
     
     def reset_collected_audio(self):
-        """Reset the collected audio buffer and silence state"""
+        """Reset the collected audio buffer, silence state, and VAD buffer"""
         self.audio_buffer = []
+        self._vad_buffer = []
         # Phase 3: Reset silence tracking state as well
         self.current_silence_s = 0.0
         self.is_potentially_speaking = False
-        logger.debug("AudioManager: Cleared audio buffer and silence state.")
+        # Reset VAD model state for clean start
+        if self._vad_model is not None:
+            self._vad_model.reset_states()
+        logger.debug("AudioManager: Cleared audio buffer, VAD buffer, and silence state.")
     
     def is_collecting_func(self):
         """Returns whether we're collecting audio"""
@@ -143,7 +190,7 @@ class AudioManager:
 
         Routes to either:
         - Streaming mode: Fixed-interval chunks for real-time transcription
-        - Queue mode: RMS-based silence detection for batch transcription
+        - Queue mode: Silero VAD-based silence detection for batch transcription
         """
         if not self.is_collecting:
             # Optimization: Don't process if not collecting
@@ -161,12 +208,15 @@ class AudioManager:
             self._streaming_audio_callback(chunk, frames)
             return
 
-        # Otherwise, use the original RMS-based segmentation logic
+        # Otherwise, use VAD-based segmentation logic
         current_chunk_duration_s = float(frames) / SAMPLE_RATE
-        
-        # Calculate RMS
+
+        # Flatten chunk if needed
+        chunk_flat = chunk.flatten() if chunk.ndim > 1 else chunk
+
+        # Calculate RMS for UI feedback (keeping this for visualization)
         try:
-            rms = np.sqrt(np.mean(chunk**2))
+            rms = np.sqrt(np.mean(chunk_flat**2))
             logger.debug(f"RMS: {rms:.6f}")
             self.last_rms = rms
 
@@ -176,16 +226,43 @@ class AudioManager:
                 self.app_state.buffer_size_samples = len(self.audio_buffer)
         except Exception as e:
             logger.error(f"Error calculating RMS: {e}")
-            rms = 0 # Assign a default value on error
+            rms = 0
 
-        # --- Phase 3: Segmentation Logic ---
-        is_speech_chunk = rms >= self.RMS_THRESHOLD
+        # --- VAD-based speech detection ---
+        # Accumulate samples in VAD buffer and process 512-sample chunks
+        self._vad_buffer.extend(chunk_flat.tolist())
+
+        # Determine if this chunk contains speech using VAD
+        is_speech_chunk = False
+        speech_prob = 0.0
+        ran_vad = False
+
+        # Process all complete 512-sample chunks in the buffer
+        while len(self._vad_buffer) >= self.VAD_CHUNK_SAMPLES:
+            vad_chunk = np.array(self._vad_buffer[:self.VAD_CHUNK_SAMPLES], dtype=np.float32)
+            self._vad_buffer = self._vad_buffer[self.VAD_CHUNK_SAMPLES:]
+
+            prob = self._get_speech_probability(vad_chunk)
+            if prob >= 0:  # Valid VAD result
+                ran_vad = True
+                speech_prob = max(speech_prob, prob)
+                if prob >= self.VAD_THRESHOLD:
+                    is_speech_chunk = True
+                    logger.debug(f"VAD: speech detected (prob={prob:.2f})")
+
+        # Update app_state with smoothed VAD probability (only when we ran VAD)
+        if self.app_state and ran_vad:
+            # Exponential moving average for smoother display
+            alpha = 0.4  # Smoothing factor (higher = more responsive)
+            self.app_state.current_vad_prob = (
+                alpha * speech_prob + (1 - alpha) * self.app_state.current_vad_prob
+            )
 
         if is_speech_chunk:
-            # Speech or noise detected
+            # Speech detected by VAD
             self.audio_buffer.append(chunk) # Buffer this chunk
             if not self.is_potentially_speaking:
-                 logger.debug("Speech detected (RMS threshold crossed).")
+                 logger.debug(f"Speech detected (VAD prob={speech_prob:.2f})")
             # Reset silence duration because we heard sound
             self.current_silence_s = 0.0 
             self.is_potentially_speaking = True
