@@ -1,0 +1,5 @@
+mlx
+sentencepiece>=0.2.0
+safetensors
+huggingface_hub>=0.23.0
+librosa>=0.11.0

@@ -85,6 +85,12 @@ pip install -r requirements-nvidia.txt
 
 # For Whisper model support (optional)
 pip install -r requirements-whisper.txt
+
+# For Cohere on Apple Silicon / MLX (optional)
+pip install -r requirements-cohere-mlx.txt
+
+# For Cohere reference PyTorch backend (optional)
+pip install -r requirements-cohere.txt
 ```
 
 ## 🧰 Entry Points
@@ -129,6 +135,8 @@ ctrlSPEAK uses open-source speech recognition models:
 - **Canary**: NVIDIA NeMo's `nvidia/canary-1b-flash` multilingual model (En, De, Fr, Es) with punctuation, but can be slower. Requires `requirements-nvidia.txt`.
 - **Canary (180M)**: NVIDIA NeMo's `nvidia/canary-180m-flash` multilingual model, smaller and less accurate. Requires `requirements-nvidia.txt`.
 - **Whisper** (optional): OpenAI's `openai/whisper-large-v3` model. A fast, accurate, and powerful model that includes excellent punctuation and capitalization. Requires `requirements-whisper.txt`.
+- **Cohere**: The default Cohere shortcut maps to the Apple Silicon MLX backend. Use `cohere` or the `--cohere` shortcut. Requires `requirements-cohere-mlx.txt`.
+- **Cohere (reference backend)**: The direct PyTorch/Transformers implementation remains in the repo as a reference path for development and comparison. It runs CPU-first and requires `requirements-cohere.txt`, but it is not exposed as a normal model shortcut.
 - **Nemotron (Streaming)** [Experimental]: NVIDIA's `nvidia/nemotron-speech-streaming-en-0.6b` streaming model with real-time transcription. Text appears as you speak. Requires `requirements-nvidia.txt`.
 
 **Note:** The `nvidia/parakeet-tdt-1.1b` model is also available for testing, but it is not recommended for general use as it lacks punctuation and is slower than the `0.6b` model. Requires `requirements-nvidia.txt`.
@@ -159,6 +167,7 @@ You can select a model using the `--model` flag. You can use either the full mod
 *   `canary`: NVIDIA's Canary 1B Flash model.
 *   `canary-180m`: NVIDIA's Canary 180M Flash model.
 *   `whisper`: OpenAI's Whisper v3 model.
+*   `cohere`: Cohere Transcribe on the Apple Silicon MLX backend. Recommended Cohere shortcut.
 *   `nemotron`: NVIDIA's Nemotron streaming model. [Experimental]
 
 **Full Model URL:**
@@ -178,6 +187,8 @@ ctrlspeak --model canary         # Multilingual with punctuation
 ctrlspeak --model canary-180m    # The smaller Canary model
 ctrlspeak --model canary-v2
 ctrlspeak --model whisper        # OpenAI's model
+ctrlspeak --cohere               # Shortcut for Cohere on MLX
+ctrlspeak --model cohere         # Cohere Transcribe on MLX
 ctrlspeak --model parakeet-mlx   # MLX-accelerated model
 ctrlspeak --model nemotron       # Streaming (experimental)
 
@@ -187,6 +198,8 @@ python ctrlspeak.py --model canary
 python ctrlspeak.py --model canary-180m
 python ctrlspeak.py --model canary-v2
 python ctrlspeak.py --model whisper
+python ctrlspeak.py --cohere
+python ctrlspeak.py --model cohere
 python ctrlspeak.py --model parakeet-mlx
 python ctrlspeak.py --model nemotron
 ```
@@ -260,7 +273,8 @@ Examples:
 4. **Canary (NVIDIA)** - `nvidia/canary-180m-flash`
 5. **Canary (NVIDIA)** - `nvidia/canary-1b-v2`
 6. **Whisper (OpenAI)** - `openai/whisper-large-v3`
-7. **Nemotron (NVIDIA)** - `nvidia/nemotron-speech-streaming-en-0.6b` [Experimental, Streaming]
+7. **Cohere (Apple Silicon MLX)** - `CohereLabs/cohere-transcribe-03-2026`
+8. **Nemotron (NVIDIA)** - `nvidia/nemotron-speech-streaming-en-0.6b` [Experimental, Streaming]
 
 ## Performance Comparison
 
@@ -273,6 +287,7 @@ Examples:
 | **`canary-1b-flash`** | NeMo (NVIDIA) | 32.06 | 3.20 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
 | **`canary-180m-flash`** | NeMo (NVIDIA) | 6.16 | 3.20 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
 | **`whisper-large-v3`** | Transformers (OpenAI) | 5.44 | 2.53 | "Well, I don't wish to see it any more, observed Phoebe, turning away her eyes. It is certainly very like the old portrait." |
+| **`cohere-transcribe-03-2026`** | MLX (Apple Silicon) | 1.10 | 1.29 | "Well, I don't wish to see it any more observed Phoebe turning away her eyes. It is certainly very like the old portrait." |
 
 *Testing performed on a MacBook Pro (M2 Max) with a 7-second audio file (`test.wav`). Your results may vary.*
 

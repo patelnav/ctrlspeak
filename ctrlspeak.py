@@ -59,6 +59,7 @@ def run_app(args):
     import threading
     import torch
     from models.factory import ModelFactory
+    from models.registry import get_model_metadata
     from utils.keyboard_shortcuts import KeyboardShortcutManager
     from utils.audio import AudioManager
     from model_loader import get_model
@@ -105,8 +106,10 @@ def run_app(args):
             console.print(f"  Selected: [cyan]{ModelFactory.resolve_model_alias(state.model_type)}[/cyan]")
 
         if cached_models:
-            other_cached = sorted(list(cached_models - {ModelFactory.resolve_model_alias(state.model_type)}))
-            if state.model_type in cached_models:
+            selected_meta = get_model_metadata(state.model_type)
+            selected_repo_id = selected_meta.repo_id if selected_meta else state.model_type
+            other_cached = sorted(list(cached_models - {selected_repo_id}))
+            if selected_repo_id in cached_models:
                 console.print(f"  Status: [green]Found in cache[/green]")
             else:
                 console.print(f"  Status: [yellow]Not found in cache (will be downloaded)[/yellow]")
@@ -267,13 +270,13 @@ def main():
         sys.exit(0)
 
     if args.list_models:
-        from models.factory import ModelFactory
+        from models.registry import MODEL_REGISTRY
         console = Console()
         console.print("\n[bold]Supported Models:[/bold]")
         
         # Check what dependencies are available
         nemo_available = False
-        whisper_available = False
+        transformers_available = False
         mlx_available = False
         
         try:
@@ -284,7 +287,7 @@ def main():
             
         try:
             import transformers
-            whisper_available = True
+            transformers_available = True
         except ImportError:
             pass
             
@@ -294,42 +297,56 @@ def main():
         except ImportError:
             pass
         
-        for alias, model_name in ModelFactory._DEFAULT_ALIASES.items():
+        for alias, meta in MODEL_REGISTRY.items():
             status = ""
             note = ""
             
-            if "mlx" in alias:
+            if "mlx" in meta.requires:
                 if mlx_available:
                     status = " [green]✓ Available[/green]"
                     note = " (Apple Silicon / MLX)"
                 else:
                     status = " [red]✗ Requires MLX[/red]"
-                    note = " (Apple Silicon / MLX - install with: brew install mlx)"
-            elif "nvidia" in model_name or "canary" in alias:
+                    note = " (Apple Silicon / MLX - install MLX dependencies)"
+            elif "nemo" in meta.requires:
                 if nemo_available:
                     status = " [green]✓ Available[/green]"
                 else:
                     status = " [red]✗ Requires NVIDIA support[/red]"
                     note = " (install with: brew reinstall ctrlspeak --with-nvidia)"
-            elif "whisper" in alias:
-                if whisper_available:
+            elif "transformers" in meta.requires:
+                if transformers_available:
                     status = " [green]✓ Available[/green]"
                 else:
-                    status = " [red]✗ Requires Whisper support[/red]"
-                    note = " (install with: brew reinstall ctrlspeak --with-whisper)"
+                    status = " [red]✗ Requires transformers[/red]"
+                    note = " (install with: uv pip install -r requirements-whisper.txt)"
+            elif meta.requires == "cohere-mlx":
+                if mlx_available:
+                    status = " [green]✓ Available[/green]"
+                    note = " (Apple Silicon / MLX, ~4.1GB download)"
+                else:
+                    status = " [red]✗ Requires MLX[/red]"
+                    note = " (install with: uv pip install -r requirements-cohere-mlx.txt)"
+            elif meta.requires == "cohere":
+                if transformers_available:
+                    status = " [green]✓ Available[/green]"
+                    note = " (CPU-first, ~4.1GB download, multilingual only)"
+                else:
+                    status = " [red]✗ Requires transformers[/red]"
+                    note = " (install with: uv pip install -r requirements-cohere.txt)"
             else:
                 status = " [green]✓ Available[/green]"
                 
-            console.print(f"  - [cyan]{alias}[/cyan]: {model_name}{note}{status}")
+            console.print(f"  - [cyan]{alias}[/cyan]: {meta.repo_id}{note}{status}")
         
         # Show installation recommendations
         if not nemo_available:
             console.print(f"\n[yellow]💡 Tip:[/yellow] Install NVIDIA model support with:")
             console.print(f"  [cyan]brew reinstall ctrlspeak --with-nvidia[/cyan]")
         
-        if not whisper_available:
+        if not transformers_available:
             console.print(f"\n[yellow]💡 Tip:[/yellow] Install Whisper model support with:")
-            console.print(f"  [cyan]brew reinstall ctrlspeak --with-whisper[/cyan]")
+            console.print(f"  [cyan]uv pip install -r requirements-whisper.txt[/cyan]")
             
         sys.exit(0)
 

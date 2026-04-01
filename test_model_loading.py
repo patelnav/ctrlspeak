@@ -50,15 +50,15 @@ def test_mlx_model_loads():
 def test_model_alias_resolution():
     """Test that model aliases resolve correctly."""
     from models.factory import ModelFactory
-    from state import NVIDIA_PARAKEET_V3, MLX_PARAKEET_V3
+    from state import NVIDIA_PARAKEET_V3
 
-    # Test alias resolution
-    assert ModelFactory.resolve_model_alias("parakeet") == MLX_PARAKEET_V3
-    assert ModelFactory.resolve_model_alias("parakeet-v3") == NVIDIA_PARAKEET_V3
-    assert ModelFactory.resolve_model_alias("parakeet-v3-mlx") == MLX_PARAKEET_V3
+    # Test alias resolution to canonical aliases
+    assert ModelFactory.resolve_model_alias("parakeet") == "parakeet"
+    assert ModelFactory.resolve_model_alias("parakeet-v3") == "parakeet-v3"
+    assert ModelFactory.resolve_model_alias("parakeet-v3-mlx") == "parakeet-v3-mlx"
 
-    # Test that full model names pass through
-    assert ModelFactory.resolve_model_alias(NVIDIA_PARAKEET_V3) == NVIDIA_PARAKEET_V3
+    # Test that a repo id resolves back to the canonical alias
+    assert ModelFactory.resolve_model_alias(NVIDIA_PARAKEET_V3) == "parakeet-v3"
 
 
 def test_get_model_raises_on_import_error():

@@ -42,12 +42,27 @@ mlx = [
     "mlx",
     "parakeet-mlx",
 ]
+cohere-mlx = [
+    "mlx",
+    "sentencepiece>=0.2.0",
+    "safetensors",
+    "huggingface_hub>=0.23.0",
+    "librosa>=0.11.0",
+]
 nvidia = [
     "nemo_toolkit[asr]>=1.23.0",
 ]
 whisper = [
     "transformers>=4.43.0",
     "accelerate>=0.30.0",
+]
+cohere = [
+    "transformers>=5.4.0",
+    "accelerate>=0.30.0",
+    "librosa>=0.11.0",
+    "sentencepiece>=0.2.0",
+    "mistral-common[image]>=1.10.0",
+    "protobuf>=6",
 ]
 
 

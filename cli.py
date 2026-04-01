@@ -11,6 +11,8 @@ def parse_args_only():
     parser.add_argument("--model", type=str, 
                         default=get_preferred_model(),
                         help="Speech recognition model to use (default: %(default)s)")
+    parser.add_argument("--cohere", action="store_const", const="cohere", dest="model",
+                        help="Shortcut for --model cohere (Apple Silicon MLX backend)")
     parser.add_argument("--source-lang", type=str,
                         default="en",
                         help="Source language for transcription (default: %(default)s)")
